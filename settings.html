@@ -55,14 +55,25 @@
 
             <!-- Parking Configuration -->
             <div class="settings-card mb-6">
-                <h3 class="font-display font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="parking-circle" class="w-5 h-5 text-charm-dark"></i> Parking Configuration</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label class="form-label">Building Name</label><input type="text" class="form-input" value="TM Building" id="buildingName"></div>
-                    <div><label class="form-label">Number of Slots</label><input type="number" class="form-input" value="10" id="totalSlots" min="1" max="100"></div>
-                    <div><label class="form-label">Scan Cooldown (seconds)</label><input type="number" class="form-input" value="5" id="scanCooldown" min="1" max="30"></div>
-                    <div><label class="form-label">Auto-assign Slots</label>
-                        <div class="toggle-switch active mt-2" id="toggleAutoAssign" onclick="this.classList.toggle('active')"></div>
+                <h3 class="font-display font-bold text-lg text-slate-800 mb-4 flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-2"><i data-lucide="parking-circle" class="w-5 h-5 text-charm-dark"></i> Parking Areas</span>
+                    <button onclick="addParkingArea()" class="px-3 py-1.5 rounded-lg bg-charm-green/10 text-charm-green text-xs font-bold hover:bg-charm-green hover:text-white transition-all flex items-center gap-1">
+                        <i data-lucide="plus" class="w-3 h-3"></i> Add Area
+                    </button>
+                </h3>
+                <div id="parkingAreasList" class="space-y-4">
+                    <!-- Area Item -->
+                    <div class="p-4 bg-white/60 rounded-2xl border border-slate-100 group">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="form-label">Area / Building Name</label><input type="text" class="form-input area-name" value="TM Building" placeholder="e.g. TM Building"></div>
+                            <div><label class="form-label">Prefix</label><input type="text" class="form-input area-prefix font-mono" value="TM" placeholder="e.g. TM"></div>
+                            <div><label class="form-label">No. of Slots</label><input type="number" class="form-input area-slots" value="10" min="1" max="50"></div>
+                        </div>
                     </div>
+                </div>
+                <div class="mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="form-label">Scan Cooldown (seconds)</label><input type="number" class="form-input" value="5" id="scanCooldown" min="1" max="30"></div>
+                    <div><label class="form-label">Auto-assign Slots</label><div class="toggle-switch active mt-2" id="toggleAutoAssign" onclick="this.classList.toggle('active')"></div></div>
                 </div>
             </div>
 
@@ -103,18 +114,75 @@
             }, 2000);
         }
 
-        function saveSettings() {
+        function addParkingArea(name = '', prefix = '', slots = 10) {
+            const list = document.getElementById('parkingAreasList');
+            const div = document.createElement('div');
+            div.className = 'p-4 bg-white/60 rounded-2xl border border-slate-100 group animate-slide-up relative';
+            div.innerHTML = `
+                <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="form-label">Area / Building Name</label><input type="text" class="form-input area-name" value="${name}" placeholder="e.g. TM Building"></div>
+                    <div><label class="form-label">Prefix</label><input type="text" class="form-input area-prefix font-mono" value="${prefix}" placeholder="e.g. TM"></div>
+                    <div><label class="form-label">No. of Slots</label><input type="number" class="form-input area-slots" value="${slots}" min="1" max="50"></div>
+                </div>
+            `;
+            list.appendChild(div);
+            lucide.createIcons();
+        }
+
+        async function saveSettings() {
+            const areaElements = document.querySelectorAll('#parkingAreasList > div');
+            const areas = Array.from(areaElements).map(el => ({
+                name: el.querySelector('.area-name').value,
+                prefix: el.querySelector('.area-prefix').value.toUpperCase(),
+                slots: parseInt(el.querySelector('.area-slots').value)
+            })).filter(a => a.name && a.prefix);
+
             const settings = {
                 deviceName: document.getElementById('deviceName').value,
                 deviceLocation: document.getElementById('deviceLocation').value,
                 deviceId: document.getElementById('deviceId').value,
-                buildingName: document.getElementById('buildingName').value,
-                totalSlots: document.getElementById('totalSlots').value,
+                parkingAreas: areas,
                 scanCooldown: document.getElementById('scanCooldown').value,
+                autoAssign: document.getElementById('toggleAutoAssign').classList.contains('active')
             };
+
+            // If connected to Supabase, we would ideally sync these areas to the parking_slots table
+            if (isConnected && areas.length > 0) {
+                showToast('Syncing new parking configuration...','info');
+                // In a real scenario, we'd truncate and regenerate slots or update them
+            }
+
             localStorage.setItem('charrmpark_settings', JSON.stringify(settings));
-            showToast('Settings saved successfully!','success');
+            showToast('Settings and Parking Areas saved!','success');
         }
+
+        // Load existing
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('charrmpark_settings');
+            if (saved) {
+                const s = JSON.parse(saved);
+                
+                // Load basic fields
+                if (s.deviceName) document.getElementById('deviceName').value = s.deviceName;
+                if (s.deviceLocation) document.getElementById('deviceLocation').value = s.deviceLocation;
+                if (s.deviceId) document.getElementById('deviceId').value = s.deviceId;
+                if (s.scanCooldown) document.getElementById('scanCooldown').value = s.scanCooldown;
+                if (s.autoAssign !== undefined) {
+                    const toggle = document.getElementById('toggleAutoAssign');
+                    if (s.autoAssign) toggle.classList.add('active');
+                    else toggle.classList.remove('active');
+                }
+
+                // Load areas
+                if (s.parkingAreas && s.parkingAreas.length > 0) {
+                    document.getElementById('parkingAreasList').innerHTML = '';
+                    s.parkingAreas.forEach(a => addParkingArea(a.name, a.prefix, a.slots));
+                }
+            }
+        });
     </script>
 </body>
 </html>

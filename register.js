@@ -64,16 +64,7 @@ function validateCurrentStep() {
             }
         }
     }
-    if (currentStep === 2) {
-        if (!photoData.profile) {
-            showToast('Please upload or take your profile photo.', 'warning');
-            return false;
-        }
-        if (!photoData.idFront || !photoData.idBack) {
-            showToast('Please upload front and back of your ID.', 'warning');
-            return false;
-        }
-    }
+    // Step 2: Photos are now OPTIONAL for easier testing
     if (currentStep === 3) {
         const fields = ['regVehType', 'regVehModel', 'regPlate', 'regVehColor'];
         for (const id of fields) {
@@ -149,7 +140,8 @@ function capturePhoto() {
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
     
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    // Compress to smaller size for DB storage
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.4);
     photoData[cameraTarget] = dataUrl;
     
     updatePhotoPreview(cameraTarget, dataUrl);
@@ -169,11 +161,26 @@ function handleFileUpload(input, target) {
         return;
     }
     
+    // Resize image before storing
     const reader = new FileReader();
     reader.onload = (e) => {
-        photoData[target] = e.target.result;
-        updatePhotoPreview(target, e.target.result);
-        showToast('Photo uploaded successfully!', 'success');
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX = 400;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const compressed = canvas.toDataURL('image/jpeg', 0.5);
+            photoData[target] = compressed;
+            updatePhotoPreview(target, compressed);
+            showToast('Photo uploaded successfully!', 'success');
+        };
+        img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
@@ -264,11 +271,14 @@ function buildReview() {
     for (const [label, img] of Object.entries(docs)) {
         if (img) {
             html += `<div class="text-center"><img src="${img}" alt="${label}" class="w-16 h-16 rounded-lg object-cover border border-slate-200 shadow-sm"><div class="text-[10px] font-bold text-slate-400 mt-1">${label}</div></div>`;
+        } else {
+            html += `<div class="text-center"><div class="w-16 h-16 rounded-lg bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-300"><i data-lucide="image-off" class="w-6 h-6"></i></div><div class="text-[10px] font-bold text-slate-400 mt-1">${label} (skipped)</div></div>`;
         }
     }
     html += '</div></div>';
     
     reviewContent.innerHTML = html;
+    lucide.createIcons();
 }
 
 // =====================
@@ -283,6 +293,7 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     btnSubmit.disabled = true;
     lucide.createIcons();
 
+    // Build user data — NO rfid_uid field (admin assigns it later)
     const userData = {
         full_name: document.getElementById('regFullName').value.trim(),
         age: parseInt(document.getElementById('regAge').value),
@@ -300,14 +311,15 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
         id_front_image: photoData.idFront || null,
         id_back_image: photoData.idBack || null,
         motorcycle_image: photoData.motorcycle || null,
-        authorization_status: 'PENDING',
-        rfid_uid: null  // Will be assigned by admin
+        authorization_status: 'PENDING'
+        // NOTE: rfid_uid is NOT sent — it stays NULL (admin assigns later)
     };
 
     try {
         if (isConnected) {
-            const { data, error } = await supabase.from('users').insert([userData]);
+            const { data, error } = await supabaseClient.from('users').insert([userData]).select();
             if (error) throw error;
+            console.log('✅ Registration saved:', data);
             showToast('Registration submitted to server!', 'success');
         } else {
             // Demo mode - save to localStorage
@@ -325,8 +337,8 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
         document.getElementById('successMessage').classList.remove('hidden');
         
     } catch (err) {
-        console.error(err);
-        showToast('Error submitting registration: ' + err.message, 'error');
+        console.error('Registration error:', err);
+        showToast('Error: ' + (err.message || err.details || 'Unknown error'), 'error');
         btnSubmit.innerHTML = origText;
         btnSubmit.disabled = false;
         lucide.createIcons();

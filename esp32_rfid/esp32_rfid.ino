@@ -24,7 +24,7 @@ const char* password = "10008636";
 // =======================
 // SUPABASE SETTINGS
 // =======================
-const char* serverName = "https://vhytyasrqwfyidezpeme.supabase.co/functions/v1/rfid-scan";
+const char* serverName = "https://vhytyasrqwfyidezpeme.supabase.co/rest/v1/parking_logs";
 const char* anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeXR5YXNycXdmeWlkZXpwZW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NzYyNzMsImV4cCI6MjA5NDI1MjI3M30.Jd4fiSxTKvXJgijGjPUiOext8_YNWL9z6-tCnGH-v2Y";
 const char* deviceId = "ESP32-CHARRMPARK-01";
 
@@ -214,11 +214,14 @@ void sendToSupabase(String uid) {
   http.addHeader("Content-Type", "application/json");
   http.addHeader("apikey", anonKey);
   http.addHeader("Authorization", String("Bearer ") + anonKey);
+  http.addHeader("Prefer", "return=representation");
 
-  // Build JSON payload
+  // Build JSON payload for parking_logs
   StaticJsonDocument<256> doc;
   doc["rfid_uid"] = uid;
-  doc["device_id"] = deviceId;
+  doc["scan_type"] = "ENTRY";
+  doc["status"] = "DENIED";
+  doc["remarks"] = "ESP32_RAW_SCAN";
 
   String jsonData;
   serializeJson(doc, jsonData);
@@ -235,50 +238,15 @@ void sendToSupabase(String uid) {
     Serial.print("): ");
     Serial.println(response);
 
-    // Parse response
-    StaticJsonDocument<512> resDoc;
-    DeserializationError err = deserializeJson(resDoc, response);
-
-    if (!err) {
-      const char* status = resDoc["status"] | "UNKNOWN";
-      const char* lcd_line1 = resDoc["lcd_line1"] | "RESPONSE OK";
-      const char* lcd_line2 = resDoc["lcd_line2"] | "";
-      const char* event = resDoc["event"] | "";
-
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print(lcd_line1);
-      lcd.setCursor(0, 1);
-      lcd.print(lcd_line2);
-
-      if (String(status) == "AUTHORIZED") {
-        // Green LED + success beep
-        digitalWrite(RED_LED, LOW);
-        digitalWrite(GREEN_LED, HIGH);
-        tone(BUZZER_PIN, 1500, 200);
-        delay(200);
-        tone(BUZZER_PIN, 2000, 200);
-
-        Serial.print("[AUTH] ");
-        Serial.print(event);
-        if (resDoc.containsKey("slot")) {
-          Serial.print(" - Slot: ");
-          Serial.println(resDoc["slot"].as<String>());
-        } else {
-          Serial.println();
-        }
-      } else {
-        // Red LED blink + error beep
-        blinkLED(RED_LED, 3);
-        tone(BUZZER_PIN, 500, 500);
-        Serial.println("[DENIED] Access denied");
-      }
-    } else {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("PARSE ERROR");
-      blinkLED(RED_LED, 2);
-    }
+    // Beep once sent
+    digitalWrite(RED_LED, LOW);
+    digitalWrite(GREEN_LED, HIGH);
+    tone(BUZZER_PIN, 1500, 200);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("SCANNED!");
+    lcd.setCursor(0, 1);
+    lcd.print("Check Dashboard");
   } else {
     Serial.print("[HTTP] Error: ");
     Serial.println(httpCode);

@@ -3,7 +3,13 @@
 -- Run this in Supabase SQL Editor
 -- ============================================
 
--- 1. USERS TABLE (Extended for registration)
+-- IMPORTANT: If tables already exist, run DROP first:
+-- DROP TABLE IF EXISTS public.parking_logs CASCADE;
+-- DROP TABLE IF EXISTS public.parking_slots CASCADE;
+-- DROP TABLE IF EXISTS public.devices CASCADE;
+-- DROP TABLE IF EXISTS public.users CASCADE;
+
+-- 1. USERS TABLE
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     full_name TEXT NOT NULL,
@@ -11,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     sex TEXT CHECK (sex IN ('Male', 'Female', 'Other')),
     address TEXT,
     role TEXT NOT NULL CHECK (role IN ('Student', 'Faculty', 'Staff', 'Visitor')),
-    rfid_uid TEXT UNIQUE,
+    rfid_uid TEXT,
     program TEXT,
     section TEXT,
     vehicle_type TEXT,
@@ -27,6 +33,12 @@ CREATE TABLE IF NOT EXISTS public.users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create a PARTIAL unique index on rfid_uid (only enforces uniqueness for non-null values)
+-- This allows multiple users to have NULL rfid_uid (unassigned)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_rfid_uid_unique 
+ON public.users (rfid_uid) 
+WHERE rfid_uid IS NOT NULL;
+
 -- 2. PARKING SLOTS TABLE
 CREATE TABLE IF NOT EXISTS public.parking_slots (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -40,7 +52,7 @@ CREATE TABLE IF NOT EXISTS public.parking_slots (
 -- 3. PARKING LOGS TABLE
 CREATE TABLE IF NOT EXISTS public.parking_logs (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id),
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     rfid_uid TEXT NOT NULL,
     scan_type TEXT NOT NULL CHECK (scan_type IN ('ENTRY', 'EXIT')),
     status TEXT NOT NULL CHECK (status IN ('AUTHORIZED', 'DENIED')),
@@ -68,10 +80,17 @@ ALTER TABLE public.parking_slots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parking_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
 
--- Policies (permissive for prototype - tighten for production)
+-- Policies (permissive for prototype)
+DROP POLICY IF EXISTS "Allow anon full access users" ON public.users;
 CREATE POLICY "Allow anon full access users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon full access slots" ON public.parking_slots;
 CREATE POLICY "Allow anon full access slots" ON public.parking_slots FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon full access logs" ON public.parking_logs;
 CREATE POLICY "Allow anon full access logs" ON public.parking_logs FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon full access devices" ON public.devices;
 CREATE POLICY "Allow anon full access devices" ON public.devices FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================

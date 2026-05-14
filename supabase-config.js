@@ -6,20 +6,20 @@
 const SUPABASE_URL = 'https://vhytyasrqwfyidezpeme.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeXR5YXNycXdmeWlkZXpwZW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NzYyNzMsImV4cCI6MjA5NDI1MjI3M30.Jd4fiSxTKvXJgijGjPUiOext8_YNWL9z6-tCnGH-v2Y';
 
-let supabase = null;
+let supabaseClient = null;
 let isConnected = false;
 
 function initSupabase() {
     try {
         if (window.supabase && SUPABASE_URL) {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             isConnected = true;
             console.log('✅ Supabase connected');
         }
     } catch (e) {
         console.warn('⚠️ Supabase not initialized. Running in Demo Mode.', e);
     }
-    return { supabase, isConnected };
+    return { supabaseClient, isConnected };
 }
 
 // Toast notification system
