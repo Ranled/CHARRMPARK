@@ -298,9 +298,27 @@ if (tabSR && tabPG) {
 // BUTTONS
 // =====================
 document.getElementById('btnDemoScan')?.addEventListener('click', () => {
-    const uid = document.getElementById('demoUidInput').value.trim() || 'B7 78 96 31';
-    processRFIDScan(uid);
-    document.getElementById('demoUidInput').value = '';
+    const uid = document.getElementById('demoUidInput').value.trim();
+    if (uid) {
+        // Manual simulation
+        processRFIDScan(uid);
+        document.getElementById('demoUidInput').value = '';
+    } else {
+        // Visual waiting state for real hardware scan via Realtime
+        switchView('livescan');
+        document.getElementById('scanResultData').classList.add('hidden');
+        document.getElementById('scanResultEmpty').classList.remove('hidden');
+        
+        document.getElementById('radarContainer').classList.add('scanning');
+        document.getElementById('radarContainer').parentElement.classList.remove('status-authorized', 'status-denied');
+        
+        document.getElementById('scanStatusText').textContent = 'WAITING FOR HARDWARE...';
+        document.getElementById('scanStatusText').className = 'text-xl font-bold font-display text-blue-600 mb-2';
+        document.getElementById('scanSubtext').textContent = 'Listening for database updates.';
+        document.getElementById('radarCenter').innerHTML = '<i data-lucide="loader-2" id="radarIcon" class="w-10 h-10 text-blue-500 animate-spin"></i>';
+        lucide.createIcons();
+        showToast('Waiting for RFID card to be tapped on the ESP32 reader...', 'info');
+    }
 });
 
 document.getElementById('btnAllow')?.addEventListener('click', () => {
