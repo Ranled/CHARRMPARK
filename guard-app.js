@@ -139,11 +139,16 @@ function renderAll() {
 
 // =====================
 // RFID SCAN — queries Supabase DB for the user
+// ================// =====================
+// RFID SCAN — queries Supabase DB for the user
 // =====================
-async function processRFIDScan(uid) {
+let pendingLogId = null;
+let pendingUserResult = null;
+
+async function processRFIDScan(uid, rawLogId = null) {
     if (!uid) return;
     uid = uid.toUpperCase().trim();
-    console.log('🔍 Processing RFID scan:', uid);
+    console.log('🔍 Processing RFID scan:', uid, 'LogID:', rawLogId);
     
     switchView('livescan');
     
@@ -158,18 +163,25 @@ async function processRFIDScan(uid) {
     resData.classList.remove('hidden');
     resData.classList.add('opacity-50');
 
+    // Reset UI elements
+    document.getElementById('slotAssignmentUI').classList.add('hidden');
+    document.getElementById('resSlotNotice').classList.add('hidden');
+    document.getElementById('manualOverrideButtons').classList.add('hidden');
+
     // ---- LOOK UP USER FROM SUPABASE ----
     let result = null;
+    let userId = null;
     
     if (isConnected) {
         try {
-            const { data: user, error } = await supabase
+            const { data: user, error } = await supabaseClient
                 .from('users')
                 .select('*')
                 .eq('rfid_uid', uid)
                 .single();
             
             if (user && !error) {
+                userId = user.id;
                 result = {
                     uid: uid,
                     name: user.full_name,
@@ -184,8 +196,6 @@ async function processRFIDScan(uid) {
                     status: user.authorization_status === 'AUTHORIZED' ? 'AUTHORIZED' : 'UNAUTHORIZED'
                 };
                 console.log('✅ User found in DB:', result.name);
-            } else {
-                console.log('⚠️ User not found in DB for UID:', uid);
             }
         } catch (e) {
             console.error('DB lookup error:', e);
@@ -195,10 +205,9 @@ async function processRFIDScan(uid) {
     // Fallback to mock users if not found in DB
     if (!result && mockUsers[uid]) {
         result = { ...mockUsers[uid] };
-        console.log('📋 Using mock user:', result.name);
+        userId = uid;
     }
     
-    // If still not found, it's an unknown card
     if (!result) {
         result = { uid, name: 'Unknown Card', role: '--', program: '--', section: '--', type: '--', model: '--', plate: '--', color: '--', status: 'UNAUTHORIZED' };
     }
@@ -206,7 +215,6 @@ async function processRFIDScan(uid) {
     // Small delay for visual effect
     await new Promise(r => setTimeout(r, 800));
     
-    // ---- DISPLAY RESULT ----
     document.getElementById('radarContainer').classList.remove('scanning');
     resData.classList.remove('opacity-50');
     
@@ -217,31 +225,67 @@ async function processRFIDScan(uid) {
         panel.classList.add('status-authorized'); panel.classList.remove('status-denied');
         document.getElementById('scanStatusText').textContent = 'AUTHORIZED';
         document.getElementById('scanStatusText').className = 'text-xl font-bold font-display text-green-600 mb-2';
-        document.getElementById('scanSubtext').textContent = 'Access Granted.';
         document.getElementById('radarCenter').innerHTML = '<i data-lucide="check" id="radarIcon" class="w-10 h-10 text-white"></i>';
-        document.getElementById('resStatusLabel').className = 'px-4 py-2 rounded-xl font-bold text-sm tracking-wide shadow-sm border bg-green-50 border-green-200 text-green-700';
-        document.getElementById('resStatusLabel').innerHTML = '✓ ENTRY GRANTED';
-        document.getElementById('resBadge').className = 'absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white text-white shadow-md bg-green-500';
-        
-        // Find free slot
-        const freeSlot = appState.parkingSlots.find(s => s.status === 'AVAILABLE');
-        if (freeSlot) {
+
+        // Check if user is already inside (EXIT logic)
+        const occupiedSlot = appState.parkingSlots.find(s => s.current_vehicle === uid);
+
+        if (occupiedSlot) {
+            // EXIT LOGIC
+            document.getElementById('scanSubtext').textContent = 'Goodbye! Safe travels.';
+            document.getElementById('resStatusLabel').className = 'px-4 py-2 rounded-xl font-bold text-sm tracking-wide shadow-sm border bg-blue-50 border-blue-200 text-blue-700';
+            document.getElementById('resStatusLabel').innerHTML = '✓ EXIT AUTHORIZED';
+            document.getElementById('resBadge').className = 'absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white text-white shadow-md bg-blue-500';
+            
             document.getElementById('resSlotNotice').classList.remove('hidden');
-            document.getElementById('resSlotId').textContent = freeSlot.slot_number;
-            freeSlot.status = 'OCCUPIED';
-            // Update in Supabase
+            document.getElementById('resSlotId').textContent = occupiedSlot.slot_number;
+            document.getElementById('resSlotNotice').querySelector('.text-charm-dark').textContent = 'Freed Parking Slot';
+            document.getElementById('resSlotNotice').querySelector('.text-slate-700').textContent = 'Slot is now available.';
+
             if (isConnected) {
-                supabaseClient.from('parking_slots').update({ status: 'OCCUPIED', current_vehicle: uid }).eq('id', freeSlot.id).then(() => console.log('Slot updated'));
+                // Free the slot
+                supabaseClient.from('parking_slots').update({ status: 'AVAILABLE', current_vehicle: null }).eq('id', occupiedSlot.id).then();
+                // Update log
+                if (rawLogId) supabaseClient.from('parking_logs').update({ scan_type: 'EXIT', status: 'AUTHORIZED', user_id: userId, parking_slot: occupiedSlot.slot_number, remarks: 'Goodbye!' }).eq('id', rawLogId).then();
             }
-            appState.entriesToday++;
-            result.event = 'ENTRY';
-            result.slot = freeSlot.slot_number;
+            appState.exitsToday++;
+            result.event = 'EXIT';
+            result.slot = occupiedSlot.slot_number;
+
+            // Reset scanner shortly
+            setTimeout(resetScanner, 5000);
         } else {
-            document.getElementById('resSlotNotice').classList.add('hidden');
-            result.event = 'ENTRY';
-            result.slot = '--';
+            // ENTRY LOGIC - Manual Slot Assignment
+            document.getElementById('scanSubtext').textContent = 'Welcome! Assign a slot.';
+            document.getElementById('resStatusLabel').className = 'px-4 py-2 rounded-xl font-bold text-sm tracking-wide shadow-sm border bg-green-50 border-green-200 text-green-700';
+            document.getElementById('resStatusLabel').innerHTML = '✓ ENTRY AUTHORIZED';
+            document.getElementById('resBadge').className = 'absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white text-white shadow-md bg-green-500';
+            
+            // Populate Dropdown
+            const selector = document.getElementById('slotSelector');
+            selector.innerHTML = '';
+            const availableSlots = appState.parkingSlots.filter(s => s.status === 'AVAILABLE');
+            if (availableSlots.length === 0) {
+                selector.innerHTML = '<option value="">Parking Full</option>';
+                document.getElementById('btnConfirmAssign').disabled = true;
+                document.getElementById('btnConfirmAssign').className = "px-4 py-2 bg-slate-400 text-white rounded-lg text-sm font-bold shadow-md cursor-not-allowed";
+            } else {
+                availableSlots.forEach(s => {
+                    selector.innerHTML += `<option value="${s.id}|${s.slot_number}">${s.slot_number}</option>`;
+                });
+                document.getElementById('btnConfirmAssign').disabled = false;
+                document.getElementById('btnConfirmAssign').className = "px-4 py-2 bg-charm-dark text-white rounded-lg text-sm font-bold shadow-md hover:bg-opacity-90 transition-colors";
+            }
+            
+            document.getElementById('slotAssignmentUI').classList.remove('hidden');
+            document.getElementById('slotAssignmentUI').classList.add('flex');
+            
+            pendingLogId = rawLogId;
+            pendingUserResult = { ...result, userId };
+            // Wait for Guard to click "Confirm Entry"
         }
     } else {
+        // UNAUTHORIZED
         panel.classList.add('status-denied'); panel.classList.remove('status-authorized');
         document.getElementById('scanStatusText').textContent = 'DENIED';
         document.getElementById('scanStatusText').className = 'text-xl font-bold font-display text-red-600 mb-2';
@@ -250,8 +294,14 @@ async function processRFIDScan(uid) {
         document.getElementById('resStatusLabel').className = 'px-4 py-2 rounded-xl font-bold text-sm tracking-wide shadow-sm border bg-red-50 border-red-200 text-red-700';
         document.getElementById('resStatusLabel').innerHTML = '✗ ACCESS DENIED';
         document.getElementById('resBadge').className = 'absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white text-white shadow-md bg-red-500';
-        document.getElementById('resSlotNotice').classList.add('hidden');
+        document.getElementById('manualOverrideButtons').classList.remove('hidden');
+        
         result.event = 'DENIED';
+        if (isConnected && rawLogId) {
+            supabaseClient.from('parking_logs').update({ scan_type: 'ENTRY', status: 'DENIED', remarks: 'Unregistered RFID' }).eq('id', rawLogId).then();
+        }
+        
+        setTimeout(resetScanner, 5000);
     }
 
     // Show user info
@@ -266,23 +316,62 @@ async function processRFIDScan(uid) {
     document.getElementById('resVehModel').textContent = result.model;
     document.getElementById('resColor').textContent = result.color;
 
-    // Add to recent scans
-    result.time = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit'});
-    appState.recentScans.unshift(result);
+    if (result.event) {
+        result.time = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit'});
+        appState.recentScans.unshift(result);
+    }
 
     lucide.createIcons();
     renderAll();
-
-    // Reset scanner after 5s
-    setTimeout(() => {
-        panel.classList.remove('status-authorized','status-denied');
-        document.getElementById('scanStatusText').textContent = 'READY';
-        document.getElementById('scanStatusText').className = 'text-xl font-bold font-display text-slate-600 mb-2';
-        document.getElementById('scanSubtext').textContent = 'Place card near reader.';
-        document.getElementById('radarCenter').innerHTML = '<i data-lucide="nfc" id="radarIcon" class="w-10 h-10 text-slate-400"></i>';
-        lucide.createIcons();
-    }, 5000);
 }
+
+function resetScanner() {
+    const panel = document.getElementById('radarContainer').parentElement;
+    panel.classList.remove('status-authorized','status-denied');
+    document.getElementById('scanStatusText').textContent = 'READY';
+    document.getElementById('scanStatusText').className = 'text-xl font-bold font-display text-slate-600 mb-2';
+    document.getElementById('scanSubtext').textContent = 'Place card near reader.';
+    document.getElementById('radarCenter').innerHTML = '<i data-lucide="nfc" id="radarIcon" class="w-10 h-10 text-slate-400"></i>';
+    lucide.createIcons();
+}
+
+// Confirm Entry Button
+document.getElementById('btnConfirmAssign')?.addEventListener('click', () => {
+    if (!pendingUserResult) return;
+    const selector = document.getElementById('slotSelector');
+    if (!selector.value) return;
+    
+    const [slotId, slotNumber] = selector.value.split('|');
+    
+    document.getElementById('slotAssignmentUI').classList.add('hidden');
+    document.getElementById('slotAssignmentUI').classList.remove('flex');
+    
+    document.getElementById('resSlotNotice').classList.remove('hidden');
+    document.getElementById('resSlotId').textContent = slotNumber;
+    document.getElementById('resSlotNotice').querySelector('.text-charm-dark').textContent = 'Assigned Parking Slot';
+    document.getElementById('resSlotNotice').querySelector('.text-slate-700').textContent = 'Vehicle authorized to park.';
+    
+    if (isConnected) {
+        supabaseClient.from('parking_slots').update({ status: 'OCCUPIED', current_vehicle: pendingUserResult.uid }).eq('id', slotId).then();
+        if (pendingLogId) {
+            supabaseClient.from('parking_logs').update({ scan_type: 'ENTRY', status: 'AUTHORIZED', user_id: pendingUserResult.userId, parking_slot: slotNumber, remarks: 'Welcome!' }).eq('id', pendingLogId).then();
+        } else {
+            supabaseClient.from('parking_logs').insert({ scan_type: 'ENTRY', status: 'AUTHORIZED', user_id: pendingUserResult.userId, rfid_uid: pendingUserResult.uid, parking_slot: slotNumber, remarks: 'Manual Scan' }).then();
+        }
+    }
+    
+    appState.entriesToday++;
+    pendingUserResult.event = 'ENTRY';
+    pendingUserResult.slot = slotNumber;
+    pendingUserResult.time = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit'});
+    appState.recentScans.unshift(pendingUserResult);
+    
+    pendingLogId = null;
+    pendingUserResult = null;
+    
+    renderAll();
+    setTimeout(resetScanner, 4000);
+});
 
 // =====================
 // TAB SWITCHING
@@ -344,8 +433,9 @@ if (isConnected) {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'parking_logs' }, async (payload) => {
             console.log('📡 New scan detected from DB:', payload.new);
             const uid = payload.new.rfid_uid;
-            if (uid) {
-                await processRFIDScan(uid);
+            // Only process raw ESP32 scans to avoid infinite loops from our own inserts
+            if (uid && payload.new.remarks === 'ESP32_RAW_SCAN') {
+                await processRFIDScan(uid, payload.new.id);
             }
         })
         .subscribe((status) => {
