@@ -76,6 +76,15 @@
                 <!-- VIEW: LIVE SCAN -->
                 <div id="view-livescan" class="app-view p-6 lg:p-8 flex flex-col gap-6 h-full animate-slide-up">
                     <div><h2 class="text-3xl font-display font-extrabold text-slate-800 tracking-tight">Live Scan Monitor</h2><p class="text-slate-500 font-medium mt-1">Real-time gate monitoring and RFID authorization.</p></div>
+                    
+                    <!-- Top Stats -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+                        <div class="glass-card rounded-2xl p-4 border border-white/60 flex items-center gap-3"><div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><i data-lucide="car-front" class="w-5 h-5"></i></div><div><div class="text-[10px] font-semibold text-slate-500 uppercase">Total Registered</div><div class="text-xl font-display font-bold text-slate-800" id="statTotal">--</div></div></div>
+                        <div class="glass-card rounded-2xl p-4 border border-white/60 flex items-center gap-3"><div class="w-12 h-12 rounded-full bg-charm-light/30 text-charm-dark flex items-center justify-center shrink-0"><i data-lucide="log-in" class="w-5 h-5"></i></div><div><div class="text-[10px] font-semibold text-slate-500 uppercase">Entries Today</div><div class="text-xl font-display font-bold text-slate-800" id="statEntries">--</div></div></div>
+                        <div class="glass-card rounded-2xl p-4 border border-white/60 flex items-center gap-3"><div class="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0"><i data-lucide="log-out" class="w-5 h-5"></i></div><div><div class="text-[10px] font-semibold text-slate-500 uppercase">Exits Today</div><div class="text-xl font-display font-bold text-slate-800" id="statExits">--</div></div></div>
+                        <div class="glass-card rounded-2xl p-4 border border-charm-yellow/50 flex items-center gap-3 relative overflow-hidden"><div class="absolute right-0 top-0 w-20 h-20 bg-charm-yellow/10 rounded-full blur-2xl"></div><div class="w-12 h-12 rounded-full bg-charm-dark text-charm-yellow flex items-center justify-center shrink-0 z-10"><i data-lucide="parking-circle" class="w-5 h-5"></i></div><div class="z-10"><div class="text-[10px] font-semibold text-slate-500 uppercase">Available Slots</div><div class="text-xl font-display font-bold text-charm-dark" id="statAvailable">--</div></div></div>
+                    </div>
+
                     <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[500px]">
                         <!-- Scanner Panel -->
                         <div class="lg:col-span-3 glass-card rounded-3xl p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-glass border border-white/50">
@@ -170,14 +179,6 @@
                                 <div class="text-center text-slate-400 text-sm py-8"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>No scans yet</div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Bottom Stats -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
-                        <div class="glass-card rounded-2xl p-4 border border-white/60 flex items-center gap-3"><div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><i data-lucide="car-front" class="w-5 h-5"></i></div><div><div class="text-[10px] font-semibold text-slate-500 uppercase">Total Registered</div><div class="text-xl font-display font-bold text-slate-800" id="statTotal">--</div></div></div>
-                        <div class="glass-card rounded-2xl p-4 border border-white/60 flex items-center gap-3"><div class="w-12 h-12 rounded-full bg-charm-light/30 text-charm-dark flex items-center justify-center shrink-0"><i data-lucide="log-in" class="w-5 h-5"></i></div><div><div class="text-[10px] font-semibold text-slate-500 uppercase">Entries Today</div><div class="text-xl font-display font-bold text-slate-800" id="statEntries">--</div></div></div>
-                        <div class="glass-card rounded-2xl p-4 border border-white/60 flex items-center gap-3"><div class="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0"><i data-lucide="log-out" class="w-5 h-5"></i></div><div><div class="text-[10px] font-semibold text-slate-500 uppercase">Exits Today</div><div class="text-xl font-display font-bold text-slate-800" id="statExits">--</div></div></div>
-                        <div class="glass-card rounded-2xl p-4 border border-charm-yellow/50 flex items-center gap-3 relative overflow-hidden"><div class="absolute right-0 top-0 w-20 h-20 bg-charm-yellow/10 rounded-full blur-2xl"></div><div class="w-12 h-12 rounded-full bg-charm-dark text-charm-yellow flex items-center justify-center shrink-0 z-10"><i data-lucide="parking-circle" class="w-5 h-5"></i></div><div class="z-10"><div class="text-[10px] font-semibold text-slate-500 uppercase">Available Slots</div><div class="text-xl font-display font-bold text-charm-dark" id="statAvailable">--</div></div></div>
-                    </div>
                 </div>
 
                 <!-- VIEW: DASHBOARD -->
