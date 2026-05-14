@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - CHARRMPARK</title>
+    <link rel="icon" type="image/png" href="logocharrmpark.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -30,11 +31,11 @@
                 <div class="lg:hidden font-display font-bold text-xl text-charm-yellow">CP</div>
             </div>
             <nav class="flex-1 py-6 flex flex-col gap-2 px-3 overflow-y-auto custom-scrollbar">
-                <a href="#" onclick="adminView('dashboard')" class="sidebar-item active" id="anav-dashboard"><i data-lucide="layout-dashboard" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Dashboard</span></a>
-                <a href="#" onclick="adminView('users')" class="sidebar-item" id="anav-users"><i data-lucide="users" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">User Management</span></a>
-                <a href="#" onclick="adminView('monitor')" class="sidebar-item" id="anav-monitor"><i data-lucide="map" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Parking Monitor</span></a>
-                <a href="#" onclick="adminView('logs')" class="sidebar-item" id="anav-logs"><i data-lucide="history" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Logs / History</span></a>
-                <a href="#" onclick="adminView('analytics')" class="sidebar-item" id="anav-analytics"><i data-lucide="bar-chart-3" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Analytics</span></a>
+                <a href="javascript:void(0)" onclick="adminView('dashboard')" class="sidebar-item active" id="anav-dashboard"><i data-lucide="layout-dashboard" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Dashboard</span></a>
+                <a href="javascript:void(0)" onclick="adminView('users')" class="sidebar-item" id="anav-users"><i data-lucide="users" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">User Management</span></a>
+                <a href="javascript:void(0)" onclick="adminView('monitor')" class="sidebar-item" id="anav-monitor"><i data-lucide="map" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Parking Monitor</span></a>
+                <a href="javascript:void(0)" onclick="adminView('logs')" class="sidebar-item" id="anav-logs"><i data-lucide="history" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Logs / History</span></a>
+                <a href="javascript:void(0)" onclick="adminView('analytics')" class="sidebar-item" id="anav-analytics"><i data-lucide="bar-chart-3" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Analytics</span></a>
                 <a href="settings.html" class="sidebar-item" id="anav-settings"><i data-lucide="settings" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Settings</span></a>
             </nav>
             <div class="p-4 border-t border-white/10 shrink-0"><a href="index.html" class="sidebar-item w-full !text-red-300 hover:!bg-red-500/10"><i data-lucide="log-out" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Logout</span></a></div>
