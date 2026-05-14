@@ -115,24 +115,26 @@ function renderAll() {
             const a = s.status === 'AVAILABLE', o = s.status === 'OCCUPIED';
             const bg = a ? 'bg-charm-light/20 border-charm-light/40 text-charm-dark' : o ? 'bg-red-50 border-red-200 text-red-600' : 'bg-yellow-50 border-yellow-200 text-yellow-700';
             const dot = a ? 'bg-charm-green' : o ? 'bg-red-500' : 'bg-yellow-400';
-            return `<div class="rounded-xl p-3 border ${bg} flex flex-col items-center justify-center slot-card"><div class="w-full flex justify-end mb-1"><div class="w-2 h-2 rounded-full ${dot}"></div></div><div class="text-lg font-display font-bold">${s.slot_number}</div><div class="text-[10px] font-bold uppercase mt-1">${s.status}</div></div>`;
+            
+            let occupant = '';
+            if (o && s.current_vehicle) {
+                const u = appState.users.find(x => x.rfid_uid === s.current_vehicle);
+                occupant = `<div class="text-[9px] font-bold mt-1 text-slate-700 truncate w-full text-center px-1">${u ? u.full_name : s.current_vehicle}</div>`;
+            }
+
+            return `<div class="rounded-xl p-3 border ${bg} flex flex-col items-center justify-center slot-card relative"><div class="w-full flex justify-end mb-1"><div class="w-2 h-2 rounded-full ${dot}"></div></div><div class="text-lg font-display font-bold">${s.slot_number}</div><div class="text-[10px] font-bold uppercase mt-1 ${occupant?'hidden':''}">${s.status}</div>${occupant}</div>`;
         }).join('');
     };
-    renderSlots('parkingSlotsContainer');
     renderSlots('liveScanSlots');
     renderSlots('monitorSlotsContainer');
 
-    // Activity table
-    if (el('dashActivityTable')) {
-        el('dashActivityTable').innerHTML = appState.recentScans.slice(0,7).map(s => `<tr class="hover:bg-white/60 transition-colors border-b border-slate-100/50"><td class="p-4 text-slate-500">${s.time}</td><td class="p-4"><div class="font-bold text-slate-800">${s.name}</div><div class="text-[10px] text-slate-400 font-mono">${s.uid}</div></td><td class="p-4 font-bold text-slate-700">${s.slot||'--'}</td><td class="p-4 text-right"><span class="px-2 py-1 rounded text-[10px] font-bold ${s.event==='ENTRY'?'bg-green-100 text-green-700':s.event==='EXIT'?'bg-red-100 text-red-700':'bg-gray-100 text-gray-700'}">${s.event||s.status}</span></td></tr>`).join('');
-    }
     if (el('logsTable')) {
-        el('logsTable').innerHTML = appState.recentScans.map(s => `<tr class="hover:bg-white/60 border-b border-slate-100/50"><td class="p-4 text-slate-500">${s.time}</td><td class="p-4 text-xs font-mono text-slate-400">${s.uid}</td><td class="p-4 font-bold text-slate-800">${s.name}</td><td class="p-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold ${s.event==='ENTRY'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${s.event||s.status}</span></td><td class="p-4 font-bold">${s.slot||'--'}</td><td class="p-4 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${s.status==='AUTHORIZED'?'text-green-600 border border-green-200':'text-red-600 border border-red-200'}">●</span></td></tr>`).join('');
+        el('logsTable').innerHTML = appState.recentScans.map(s => `<tr class="hover:bg-white/60 border-b border-slate-100/50"><td class="p-4 text-slate-500">${s.time}</td><td class="p-4 text-xs font-mono text-slate-400">${s.uid || '--'}</td><td class="p-4 font-bold text-slate-800">${s.name}</td><td class="p-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold ${s.event==='ENTRY'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${s.event||s.status}</span></td><td class="p-4 font-bold">${s.slot||'--'}</td><td class="p-4 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${s.status==='AUTHORIZED'?'text-green-600 border border-green-200':'text-red-600 border border-red-200'}">●</span></td></tr>`).join('');
     }
 
     // Recent scans sidebar
     if (el('recentScansContainer') && appState.recentScans.length > 0) {
-        el('recentScansContainer').innerHTML = appState.recentScans.slice(0,10).map(s => `<div class="bg-white/60 p-3 rounded-xl border border-white shadow-sm flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${s.status==='AUTHORIZED'?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}"><i data-lucide="${s.status==='AUTHORIZED'?'check':'x'}" class="w-4 h-4"></i></div><div class="flex-1 overflow-hidden"><div class="flex justify-between items-center mb-0.5"><span class="font-bold text-sm text-slate-800 truncate">${s.name}</span><span class="text-[10px] font-bold text-slate-400">${s.time}</span></div><div class="flex items-center gap-2"><span class="text-xs text-slate-500 font-mono bg-slate-100 px-1.5 rounded">${s.uid.substring(0,10)}</span><span class="text-[10px] font-bold uppercase ${s.status==='AUTHORIZED'?'text-green-600':'text-red-600'}">${s.event||s.status}</span></div></div></div>`).join('');
+        el('recentScansContainer').innerHTML = appState.recentScans.slice(0,10).map(s => `<div class="bg-white/60 p-3 rounded-xl border border-white shadow-sm flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${s.status==='AUTHORIZED'?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}"><i data-lucide="${s.status==='AUTHORIZED'?'check':'x'}" class="w-4 h-4"></i></div><div class="flex-1 overflow-hidden"><div class="flex justify-between items-center mb-0.5"><span class="font-bold text-sm text-slate-800 truncate">${s.name}</span><span class="text-[10px] font-bold text-slate-400">${s.time}</span></div><div class="flex items-center gap-2"><span class="text-xs text-slate-500 font-mono bg-slate-100 px-1.5 rounded">${(s.uid||'--').substring(0,10)}</span><span class="text-[10px] font-bold uppercase ${s.status==='AUTHORIZED'?'text-green-600':'text-red-600'}">${s.event||s.status}</span></div></div></div>`).join('');
     }
     lucide.createIcons();
 }

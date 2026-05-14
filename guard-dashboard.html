@@ -34,7 +34,6 @@
             </div>
             <nav class="flex-1 py-6 flex flex-col gap-2 px-3 overflow-y-auto custom-scrollbar">
                 <a href="#" onclick="switchView('livescan')" class="sidebar-item active" id="nav-livescan"><i data-lucide="scan-line" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Live Scan</span></a>
-                <a href="#" onclick="switchView('dashboard')" class="sidebar-item" id="nav-dashboard"><i data-lucide="layout-dashboard" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Dashboard</span></a>
                 <a href="#" onclick="switchView('monitor')" class="sidebar-item" id="nav-monitor"><i data-lucide="map" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Parking Monitor</span></a>
                 <a href="#" onclick="switchView('logs')" class="sidebar-item" id="nav-logs"><i data-lucide="history" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Logs / History</span></a>
                 <a href="settings.html" class="sidebar-item" id="nav-settings"><i data-lucide="settings" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Settings</span></a>
@@ -181,23 +180,6 @@
                         </div>
                 </div>
 
-                <!-- VIEW: DASHBOARD -->
-                <div id="view-dashboard" class="app-view hidden p-6 lg:p-8 flex-col gap-8 animate-slide-up">
-                    <div><h2 class="text-3xl font-display font-extrabold text-slate-800">Dashboard</h2><p class="text-slate-500 font-medium mt-1">Campus parking overview.</p></div>
-                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                        <div class="xl:col-span-2 glass-card rounded-3xl p-6 border border-white/60 shadow-glass flex flex-col min-h-[400px]">
-                            <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Recent Activity</h3>
-                            <div class="flex-1 overflow-auto rounded-xl border border-slate-100 bg-white/40">
-                                <table class="w-full text-left border-collapse min-w-[600px]"><thead class="bg-white/60 sticky top-0 backdrop-blur-md text-xs uppercase text-slate-500 font-bold tracking-wider"><tr><th class="p-4 border-b border-slate-200">Time</th><th class="p-4 border-b border-slate-200">User</th><th class="p-4 border-b border-slate-200">Slot</th><th class="p-4 border-b border-slate-200 text-right">Status</th></tr></thead><tbody id="dashActivityTable" class="text-sm"></tbody></table>
-                            </div>
-                        </div>
-                        <div class="glass-card rounded-3xl p-6 border border-white/60 shadow-glass flex flex-col">
-                            <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Space Overview</h3>
-                            <div class="flex items-center gap-4 mb-4 p-3 rounded-xl bg-white/50 border border-slate-100"><div class="flex-1 text-center border-r border-slate-200"><div class="text-2xl font-bold font-display text-charm-green" id="miniAvail">--</div><div class="text-[10px] font-bold text-slate-400 uppercase">Available</div></div><div class="flex-1 text-center"><div class="text-2xl font-bold font-display text-red-500" id="miniOccup">--</div><div class="text-[10px] font-bold text-slate-400 uppercase">Occupied</div></div></div>
-                            <div id="parkingSlotsContainer" class="grid grid-cols-3 gap-2 flex-1 content-start"></div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- VIEW: PARKING MONITOR -->
                 <div id="view-monitor" class="app-view hidden p-6 lg:p-8 flex-col gap-6 animate-slide-up">
