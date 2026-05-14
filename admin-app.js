@@ -200,10 +200,25 @@ window.openUserModal = function(id) {
             document.getElementById('formPlate').value = u.plate_number || '';
             document.getElementById('formVehModel').value = u.vehicle_model || '';
             document.getElementById('formVehColor').value = u.vehicle_color || '';
+
+            // Set Image Previews
+            const profileImg = u.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=random`;
+            const motorImg = u.motorcycle_image || 'https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&q=80&w=200';
+            
+            document.getElementById('prevProfile').src = profileImg;
+            document.getElementById('prevMotor').src = motorImg;
+            document.getElementById('prevIDFront').src = u.id_front_image || 'https://via.placeholder.com/150?text=ID+Front';
+            document.getElementById('prevIDBack').src = u.id_back_image || 'https://via.placeholder.com/150?text=ID+Back';
+            document.getElementById('prevLicense').src = u.drivers_license_image || 'https://via.placeholder.com/150?text=License';
         }
     } else {
         document.getElementById('modalTitle').textContent = 'Register New User';
         document.getElementById('userForm').reset();
+        document.getElementById('prevProfile').src = 'https://ui-avatars.com/api/?name=User&background=random';
+        document.getElementById('prevMotor').src = 'https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&q=80&w=200';
+        document.getElementById('prevIDFront').src = 'https://via.placeholder.com/150?text=ID+Front';
+        document.getElementById('prevIDBack').src = 'https://via.placeholder.com/150?text=ID+Back';
+        document.getElementById('prevLicense').src = 'https://via.placeholder.com/150?text=License';
     }
     
     m.classList.remove('hidden');
@@ -244,8 +259,13 @@ window.saveUser = async function() {
         plate_number: document.getElementById('formPlate').value.toUpperCase().trim() || null,
         vehicle_model: document.getElementById('formVehModel').value.trim() || null,
         vehicle_color: document.getElementById('formVehColor').value.trim() || null,
-        authorization_status: 'AUTHORIZED'
+        authorization_status: 'AUTHORIZED',
+        profile_image: document.getElementById('prevProfile').src.startsWith('data:') ? document.getElementById('prevProfile').src : undefined,
+        motorcycle_image: document.getElementById('prevMotor').src.startsWith('data:') ? document.getElementById('prevMotor').src : undefined
     };
+
+    // Remove undefined fields so we don't overwrite with null if not changed
+    Object.keys(userData).forEach(key => userData[key] === undefined && delete userData[key]);
     
     const userId = document.getElementById('formUserId').value;
     
@@ -279,6 +299,22 @@ window.saveUser = async function() {
         console.error('Save error:', e);
         showToast('Error: ' + (e.message || e.details || 'Unknown error'), 'error');
     }
+};
+
+window.previewFile = function(input, imgId) {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(imgId).src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+};
+
+window.viewFullImage = function(src) {
+    if (src.includes('placeholder.com')) return;
+    window.open(src, '_blank');
 };
 
 // =====================

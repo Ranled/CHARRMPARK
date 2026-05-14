@@ -127,7 +127,7 @@ function renderAll() {
                     occupant = `<div class="text-[9px] font-bold mt-1 text-slate-700 truncate w-full text-center px-1">${u ? u.full_name : s.current_vehicle}</div>`;
                 }
 
-                return `<div class="rounded-xl p-3 border ${bg} flex flex-col items-center justify-center slot-card relative"><div class="w-full flex justify-end mb-1"><div class="w-2 h-2 rounded-full ${dot}"></div></div><div class="text-lg font-display font-bold">${s.slot_number}</div><div class="text-[10px] font-bold uppercase mt-1 ${occupant?'hidden':''}">${s.status}</div>${occupant}</div>`;
+                return `<div onclick="${o?'showSlotInfo(\''+s.current_vehicle+'\')':''}" class="rounded-xl p-3 border ${bg} flex flex-col items-center justify-center slot-card relative ${o?'cursor-pointer hover:scale-105 transition-transform':''}"><div class="w-full flex justify-end mb-1"><div class="w-2 h-2 rounded-full ${dot}"></div></div><div class="text-lg font-display font-bold">${s.slot_number}</div><div class="text-[10px] font-bold uppercase mt-1 ${occupant?'hidden':''}">${s.status}</div>${occupant}</div>`;
             }).join('');
         } catch(e) { console.error('Render slots error:', e); }
     };
@@ -156,6 +156,40 @@ function renderAll() {
     }
     try { lucide.createIcons(); } catch(e){}
 }
+
+function showSlotInfo(uid) {
+    if (!uid) return;
+    const u = (appState.users || []).find(x => x.rfid_uid === uid);
+    if (!u) return;
+
+    document.getElementById('modalName').textContent = u.full_name;
+    document.getElementById('modalRole').textContent = u.role;
+    document.getElementById('modalProgram').textContent = `${u.program || '--'} • ${u.section || '--'}`;
+    document.getElementById('modalPlate').textContent = u.plate_number || '--';
+    document.getElementById('modalVehType').textContent = u.vehicle_type || '--';
+    document.getElementById('modalVehModel').textContent = u.vehicle_model || '--';
+    
+    document.getElementById('modalProfileImage').src = u.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=random`;
+    document.getElementById('modalVehImage').src = u.motorcycle_image || 'https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&q=80&w=800';
+
+    const m = document.getElementById('slotInfoModal');
+    m.classList.remove('hidden');
+    setTimeout(() => {
+        m.classList.remove('opacity-0');
+        document.getElementById('slotInfoContent').classList.remove('scale-95');
+    }, 10);
+    lucide.createIcons();
+}
+
+function closeSlotModal() {
+    const m = document.getElementById('slotInfoModal');
+    m.classList.add('opacity-0');
+    document.getElementById('slotInfoContent').classList.add('scale-95');
+    setTimeout(() => m.classList.add('hidden'), 300);
+}
+
+window.showSlotInfo = showSlotInfo;
+window.closeSlotModal = closeSlotModal;
 
 // =====================
 // RFID SCAN — queries Supabase DB for the user

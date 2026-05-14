@@ -158,6 +158,38 @@
                     <div class="space-y-1"><label class="form-label">Plate Number</label><input type="text" id="formPlate" class="form-input font-mono uppercase" placeholder="ABC-1234"></div>
                     <div class="space-y-1"><label class="form-label">Model</label><input type="text" id="formVehModel" class="form-input"></div>
                     <div class="space-y-1"><label class="form-label">Color</label><input type="text" id="formVehColor" class="form-input"></div>
+                    <div class="md:col-span-2 mt-2 pt-4 border-t border-slate-100"><h4 class="text-sm font-bold text-slate-800 mb-3">User Documents & Photos</h4></div>
+                    <div class="space-y-3">
+                        <label class="form-label">Profile Photo</label>
+                        <div class="flex items-center gap-4">
+                            <img id="prevProfile" src="https://ui-avatars.com/api/?name=User&background=random" class="w-16 h-16 rounded-xl object-cover border border-slate-200">
+                            <input type="file" id="uploadProfile" accept="image/*" class="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-charm-dark/10 file:text-charm-dark hover:file:bg-charm-dark/20" onchange="previewFile(this, 'prevProfile')">
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <label class="form-label">Vehicle/Motorcycle Photo</label>
+                        <div class="flex items-center gap-4">
+                            <img id="prevMotor" src="https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&q=80&w=200" class="w-16 h-16 rounded-xl object-cover border border-slate-200">
+                            <input type="file" id="uploadMotor" accept="image/*" class="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-charm-dark/10 file:text-charm-dark hover:file:bg-charm-dark/20" onchange="previewFile(this, 'prevMotor')">
+                        </div>
+                    </div>
+                    <div class="md:col-span-2 space-y-3">
+                        <label class="form-label">Additional Documents (ID/License)</label>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center">
+                                <img id="prevIDFront" src="https://via.placeholder.com/150?text=ID+Front" class="w-full h-20 rounded-lg object-cover border border-slate-200 mb-2 cursor-pointer" onclick="viewFullImage(this.src)">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">ID Front</label>
+                            </div>
+                            <div class="text-center">
+                                <img id="prevIDBack" src="https://via.placeholder.com/150?text=ID+Back" class="w-full h-20 rounded-lg object-cover border border-slate-200 mb-2 cursor-pointer" onclick="viewFullImage(this.src)">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">ID Back</label>
+                            </div>
+                            <div class="text-center">
+                                <img id="prevLicense" src="https://via.placeholder.com/150?text=License" class="w-full h-20 rounded-lg object-cover border border-slate-200 mb-2 cursor-pointer" onclick="viewFullImage(this.src)">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">License</label>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
