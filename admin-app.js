@@ -50,7 +50,7 @@ async function loadData() {
             if (se) console.error('Slots error:', se);
             adminState.slots = s&&s.length?s:generateSlots();
 
-            const {data:l, error:le} = await supabaseClient.from('parking_logs').select('*, users(full_name)').order('timestamp',{ascending:false}).limit(30);
+            const {data:l, error:le} = await supabaseClient.from('parking_logs').select('*, users(full_name)').order('timestamp',{ascending:false}).limit(1000);
             if (le) console.error('Logs error:', le);
             if(l) adminState.logs = l;
 
@@ -116,8 +116,9 @@ function renderAdmin() {
 
     // Logs
     if(el('adminLogsTable')) {
-        if (adminState.logs.length) {
-            el('adminLogsTable').innerHTML = adminState.logs.map(l=>`<tr class="hover:bg-white/60 border-b border-slate-100/50"><td class="p-4 text-slate-500">${l.timestamp?new Date(l.timestamp).toLocaleTimeString('en-US',{hour12:false}):'--'}</td><td class="p-4 font-mono text-xs text-slate-400">${l.rfid_uid}</td><td class="p-4 font-bold text-slate-800">${l.users?.full_name||'Unknown'}</td><td class="p-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold ${l.scan_type==='ENTRY'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${l.scan_type}</span></td><td class="p-4 font-bold">${l.parking_slot||'--'}</td><td class="p-4 text-right"><span class="text-[10px] font-bold ${l.status==='AUTHORIZED'?'text-green-600':'text-red-600'}">●</span></td></tr>`).join('');
+        const recentLogs = adminState.logs.slice(0, 30);
+        if (recentLogs.length) {
+            el('adminLogsTable').innerHTML = recentLogs.map(l=>`<tr class="hover:bg-white/60 border-b border-slate-100/50"><td class="p-4 text-slate-500">${l.timestamp?new Date(l.timestamp).toLocaleTimeString('en-US',{hour12:false}):'--'}</td><td class="p-4 font-mono text-xs text-slate-400">${l.rfid_uid}</td><td class="p-4 font-bold text-slate-800">${l.users?.full_name||'Unknown'}</td><td class="p-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold ${l.scan_type==='ENTRY'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${l.scan_type}</span></td><td class="p-4 font-bold">${l.parking_slot||'--'}</td><td class="p-4 text-right"><span class="text-[10px] font-bold ${l.status==='AUTHORIZED'?'text-green-600':'text-red-600'}">●</span></td></tr>`).join('');
         } else {
             el('adminLogsTable').innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No scan logs yet</td></tr>';
         }
@@ -281,11 +282,11 @@ window.saveUser = async function() {
 };
 
 // =====================
-// CHARTS
+// CHARTS & ANALYTICS
 // =====================
-let chartsInit = false;
+let chart1, chart2, chart3;
+
 function initCharts() {
-    if(chartsInit) return; chartsInit = true;
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#64748b';
 
@@ -295,13 +296,66 @@ function initCharts() {
     const staff = adminState.users.filter(u=>u.role==='Staff').length;
 
     const ctx1 = document.getElementById('chartUserTypes');
-    if(ctx1) new Chart(ctx1,{type:'doughnut',data:{labels:['Students','Faculty','Staff'],datasets:[{data:[students||65,faculty||20,staff||15],backgroundColor:['#1F6B4F','#B7D8B0','#F4C542'],borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,usePointStyle:true}}},cutout:'70%'}});
+    if(ctx1) {
+        if(chart1) chart1.destroy();
+        chart1 = new Chart(ctx1,{type:'doughnut',data:{labels:['Students','Faculty','Staff'],datasets:[{data:[students||1,faculty||0,staff||0],backgroundColor:['#1F6B4F','#B7D8B0','#F4C542'],borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,usePointStyle:true}}},cutout:'70%'}});
+    }
     
+    // Entry vs Exit based on logs
+    let entries = 0, exits = 0;
+    adminState.logs.forEach(l => { if(l.scan_type==='ENTRY') entries++; else if(l.scan_type==='EXIT') exits++; });
+
     const ctx2 = document.getElementById('chartEntryExit');
-    if(ctx2) new Chart(ctx2,{type:'bar',data:{labels:['Mon','Tue','Wed','Thu','Fri'],datasets:[{label:'Entries',data:[120,150,140,130,160],backgroundColor:'#1F6B4F',borderRadius:4},{label:'Exits',data:[115,145,135,125,155],backgroundColor:'#B7D8B0',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'},border:{display:false}},x:{grid:{display:false},border:{display:false}}},plugins:{legend:{position:'bottom'}}}});
+    if(ctx2) {
+        if(chart2) chart2.destroy();
+        chart2 = new Chart(ctx2,{type:'bar',data:{labels:['Total Scans'],datasets:[{label:'Entries',data:[entries||0],backgroundColor:'#1F6B4F',borderRadius:4},{label:'Exits',data:[exits||0],backgroundColor:'#B7D8B0',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'},border:{display:false}},x:{grid:{display:false},border:{display:false}}},plugins:{legend:{position:'bottom'}}}});
+    }
     
     const ctx3 = document.getElementById('chartPeakHours');
-    if(ctx3) new Chart(ctx3,{type:'line',data:{labels:['7AM','9AM','11AM','1PM','3PM','5PM','7PM'],datasets:[{label:'Vehicles',data:[30,120,100,110,80,40,10],borderColor:'#F4C542',backgroundColor:'rgba(244,197,66,0.2)',fill:true,tension:0.4,pointBackgroundColor:'#1F6B4F',pointBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'},border:{display:false}},x:{grid:{display:false},border:{display:false}}},plugins:{legend:{display:false}}}});
+    if(ctx3) {
+        if(chart3) chart3.destroy();
+        chart3 = new Chart(ctx3,{type:'line',data:{labels:['7AM','9AM','11AM','1PM','3PM','5PM','7PM'],datasets:[{label:'Vehicles',data:[30,120,100,110,80,40,10],borderColor:'#F4C542',backgroundColor:'rgba(244,197,66,0.2)',fill:true,tension:0.4,pointBackgroundColor:'#1F6B4F',pointBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'},border:{display:false}},x:{grid:{display:false},border:{display:false}}},plugins:{legend:{display:false}}}});
+    }
+
+    // Process Rankings
+    const logCounts = {};
+    adminState.logs.forEach(l => {
+        if (l.user_id) {
+            logCounts[l.user_id] = (logCounts[l.user_id] || 0) + 1;
+        }
+    });
+
+    const rankedUsers = adminState.users
+        .map(u => ({ ...u, logCount: logCounts[u.id] || 0 }))
+        .filter(u => u.logCount > 0)
+        .sort((a, b) => b.logCount - a.logCount);
+
+    const studentsRank = rankedUsers.filter(u => u.role === 'Student').slice(0, 10);
+    const facultyRank = rankedUsers.filter(u => u.role === 'Faculty' || u.role === 'Staff').slice(0, 10);
+
+    const sTable = document.getElementById('studentRankingTable');
+    if (sTable) {
+        sTable.innerHTML = studentsRank.length ? studentsRank.map((u, i) => `
+            <tr class="hover:bg-white/60 border-b border-slate-100/50">
+                <td class="p-3 text-slate-500 font-bold w-12">#${i + 1}</td>
+                <td class="p-3 font-bold text-slate-800">${u.full_name}</td>
+                <td class="p-3 text-center text-xs text-slate-500">${u.program || '--'}</td>
+                <td class="p-3 text-right font-display font-bold text-charm-dark">${u.logCount}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="4" class="p-6 text-center text-slate-400">No student activity</td></tr>';
+    }
+
+    const fTable = document.getElementById('facultyRankingTable');
+    if (fTable) {
+        fTable.innerHTML = facultyRank.length ? facultyRank.map((u, i) => `
+            <tr class="hover:bg-white/60 border-b border-slate-100/50">
+                <td class="p-3 text-slate-500 font-bold w-12">#${i + 1}</td>
+                <td class="p-3 font-bold text-slate-800">${u.full_name}</td>
+                <td class="p-3 text-center text-xs text-slate-500"><span class="px-2 py-0.5 rounded bg-slate-100">${u.role}</span></td>
+                <td class="p-3 text-right font-display font-bold text-charm-mid">${u.logCount}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="4" class="p-6 text-center text-slate-400">No faculty/staff activity</td></tr>';
+    }
 }
 
 // =====================
