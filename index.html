@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHARRMPARK - Intelligent RFID Parking Management System</title>
+    <meta name="description" content="CHARRMPARK RFID Smart Parking System - Select your role to access the campus parking management platform.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        charm: {
+                            dark: '#0E4B3A',
+                            mid: '#1F6B4F',
+                            light: '#B7D8B0',
+                            yellow: '#F2B827',
+                            white: '#FFFFFF',
+                            gray: '#F5F5F5',
+                            red: '#EF4444',
+                            green: '#22C55E'
+                        }
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px 0 rgba(14, 75, 58, 0.15)',
+                        'hover': '0 25px 50px -12px rgba(14, 75, 58, 0.35)',
+                        'glow-yellow': '0 0 40px rgba(242, 184, 39, 0.3)',
+                        'glow-green': '0 0 40px rgba(34, 197, 94, 0.2)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-100 text-slate-800 font-sans min-h-screen campus-bg relative flex flex-col items-center justify-center p-6">
+
+    <!-- Animated Background -->
+    <div class="absolute inset-0 bg-charm-dark/85 backdrop-blur-md z-0 pointer-events-none"></div>
+    
+    <!-- Floating particles -->
+    <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="particle particle-1"></div>
+        <div class="particle particle-2"></div>
+        <div class="particle particle-3"></div>
+        <div class="particle particle-4"></div>
+        <div class="particle particle-5"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="relative z-10 w-full max-w-6xl animate-slide-up flex flex-col items-center">
+        
+        <!-- Branding Header -->
+        <div class="text-center mb-16">
+            <div class="w-28 h-28 bg-white/10 rounded-3xl mx-auto mb-6 flex items-center justify-center backdrop-blur-lg border border-white/20 shadow-glass overflow-hidden logo-pulse">
+                <img src="logocharrmpark.png" alt="CHARRMPARK Logo" class="w-20 h-20 object-contain" onerror="this.style.display='none'; this.parentElement.innerHTML='<i data-lucide=&quot;parking-circle&quot; class=&quot;w-14 h-14 text-charm-yellow&quot;></i>'; lucide.createIcons();">
+            </div>
+            <h1 class="font-display font-extrabold text-5xl md:text-6xl tracking-tight text-white mb-3">CHARRM<span class="text-charm-yellow">PARK</span></h1>
+            <p class="text-charm-light/80 text-lg font-medium tracking-wide uppercase">Intelligent RFID Parking Management System</p>
+            <p class="text-white/40 text-sm mt-2 font-medium">Select your role to continue</p>
+        </div>
+
+        <!-- Role Selection Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full" id="roleCards">
+            
+            <!-- Student / Faculty Registration -->
+            <a href="register.html" id="card-student" class="group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 hover:border-white/40">
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="relative z-10 w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 group-hover:bg-blue-500/40 transition-all duration-300 border border-blue-400/30 group-hover:shadow-glow-green group-hover:scale-110">
+                    <i data-lucide="graduation-cap" class="w-10 h-10 text-blue-300"></i>
+                </div>
+                <h3 class="relative z-10 font-display font-bold text-2xl text-white mb-2">Student / Faculty</h3>
+                <p class="relative z-10 text-slate-300 text-sm font-medium mb-6 flex-1">Register your vehicle, upload documents, and apply for campus parking access.</p>
+                <div class="relative z-10 w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm border border-white/10 group-hover:bg-white group-hover:text-charm-dark transition-all duration-300">
+                    Register Now
+                </div>
+            </a>
+
+            <!-- Guard Dashboard -->
+            <a href="guard-dashboard.html" id="card-guard" class="group relative bg-white/10 backdrop-blur-xl border-2 border-charm-yellow/50 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 transform scale-105 z-20">
+                <div class="absolute -top-4 bg-charm-yellow text-charm-dark text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg animate-pulse-slow">Primary System</div>
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                
+                <div class="relative z-10 w-24 h-24 rounded-full bg-charm-yellow/20 flex items-center justify-center mb-6 group-hover:bg-charm-yellow/40 transition-all duration-300 border border-charm-yellow/50 shadow-glow-yellow group-hover:scale-110">
+                    <i data-lucide="shield-check" class="w-12 h-12 text-charm-yellow"></i>
+                </div>
+                <h3 class="relative z-10 font-display font-bold text-3xl text-white mb-2">Security Guard</h3>
+                <p class="relative z-10 text-slate-300 text-sm font-medium mb-8 flex-1">Access Live Scan, verify RFID tags, manage parking slots, and monitor activity in real-time.</p>
+                <div class="relative z-10 w-full py-4 rounded-xl bg-charm-yellow text-charm-dark font-bold text-sm shadow-lg group-hover:bg-white transition-all duration-300">
+                    Access Dashboard
+                </div>
+            </a>
+
+            <!-- Admin Panel -->
+            <a href="admin-dashboard.html" id="card-admin" class="group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 hover:border-white/40">
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="relative z-10 w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mb-6 group-hover:bg-purple-500/40 transition-all duration-300 border border-purple-400/30 group-hover:shadow-glow-green group-hover:scale-110">
+                    <i data-lucide="shield-alert" class="w-10 h-10 text-purple-300"></i>
+                </div>
+                <h3 class="relative z-10 font-display font-bold text-2xl text-white mb-2">Administrator</h3>
+                <p class="relative z-10 text-slate-300 text-sm font-medium mb-6 flex-1">Approve registrations, manage users, view analytics, and configure the parking system.</p>
+                <div class="relative z-10 w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm border border-white/10 group-hover:bg-white group-hover:text-charm-dark transition-all duration-300">
+                    Manage System
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-16 text-center">
+            <p class="text-slate-400 text-xs font-medium uppercase tracking-widest">&copy; 2024 CHARRMPARK University Systems. All Rights Reserved.</p>
+            <p class="text-slate-500/50 text-[10px] mt-2">Powered by Supabase &bull; ESP32 RFID Integration</p>
+        </div>
+    </div>
+
+    <!-- Init script -->
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

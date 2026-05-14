@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - CHARRMPARK</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: {
+            fontFamily: { sans: ['Inter','sans-serif'], display: ['Poppins','sans-serif'] },
+            colors: { charm: { dark:'#0E4B3A', light:'#B7D8B0', yellow:'#F2B827', green:'#22C55E', red:'#EF4444' } }
+        }}}
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-100 text-slate-800 font-sans min-h-screen campus-bg relative">
+    <div class="absolute inset-0 bg-white/80 backdrop-blur-xl z-0 pointer-events-none"></div>
+    <div class="relative z-10 min-h-screen flex flex-col">
+        <header class="glass-header border-b border-white/40 px-6 py-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-charm-dark rounded-xl flex items-center justify-center"><i data-lucide="settings" class="w-5 h-5 text-charm-yellow"></i></div>
+                <div><h1 class="font-display font-bold text-lg text-charm-dark">CHARRM<span class="text-charm-yellow">PARK</span></h1><p class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">System Settings</p></div>
+            </div>
+            <button onclick="history.back()" class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-charm-dark"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button>
+        </header>
+        <div class="flex-1 p-6 md:p-10 max-w-4xl mx-auto w-full animate-slide-up">
+            <h2 class="font-display font-extrabold text-3xl text-slate-800 mb-8">Settings</h2>
+
+            <!-- System Info -->
+            <div class="settings-card mb-6">
+                <h3 class="font-display font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="info" class="w-5 h-5 text-charm-dark"></i> System Information</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="p-3 bg-white/60 rounded-xl border border-slate-100"><div class="text-[10px] font-bold text-slate-400 uppercase">Version</div><div class="text-sm font-bold text-slate-800 mt-1">1.0.0-beta</div></div>
+                    <div class="p-3 bg-white/60 rounded-xl border border-slate-100"><div class="text-[10px] font-bold text-slate-400 uppercase">Database</div><div class="text-sm font-bold text-green-600 mt-1" id="settingsDbStatus">Checking...</div></div>
+                    <div class="p-3 bg-white/60 rounded-xl border border-slate-100"><div class="text-[10px] font-bold text-slate-400 uppercase">ESP32 Device</div><div class="text-sm font-bold text-yellow-600 mt-1" id="settingsDeviceStatus">Not Connected</div></div>
+                    <div class="p-3 bg-white/60 rounded-xl border border-slate-100"><div class="text-[10px] font-bold text-slate-400 uppercase">Total Slots</div><div class="text-sm font-bold text-slate-800 mt-1">10</div></div>
+                </div>
+            </div>
+
+            <!-- ESP32 Connection -->
+            <div class="settings-card mb-6">
+                <h3 class="font-display font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="cpu" class="w-5 h-5 text-charm-dark"></i> ESP32 Device Configuration</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div><label class="form-label">Device Name</label><input type="text" class="form-input" value="Main Gate Scanner" id="deviceName"></div>
+                    <div><label class="form-label">Device Location</label><input type="text" class="form-input" value="TM Building Entrance" id="deviceLocation"></div>
+                    <div><label class="form-label">ESP32 Identifier</label><input type="text" class="form-input font-mono" value="ESP32-CHARRMPARK-01" id="deviceId"></div>
+                    <div><label class="form-label">WiFi Network</label><input type="text" class="form-input" value="FTTx-4a6210" id="wifiSSID" readonly></div>
+                </div>
+                <button onclick="testConnection()" class="px-5 py-2.5 rounded-xl bg-charm-dark text-white text-sm font-bold hover:bg-opacity-90 shadow-md flex items-center gap-2"><i data-lucide="wifi" class="w-4 h-4"></i> Test Connection</button>
+            </div>
+
+            <!-- Parking Configuration -->
+            <div class="settings-card mb-6">
+                <h3 class="font-display font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="parking-circle" class="w-5 h-5 text-charm-dark"></i> Parking Configuration</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="form-label">Building Name</label><input type="text" class="form-input" value="TM Building" id="buildingName"></div>
+                    <div><label class="form-label">Number of Slots</label><input type="number" class="form-input" value="10" id="totalSlots" min="1" max="100"></div>
+                    <div><label class="form-label">Scan Cooldown (seconds)</label><input type="number" class="form-input" value="5" id="scanCooldown" min="1" max="30"></div>
+                    <div><label class="form-label">Auto-assign Slots</label>
+                        <div class="toggle-switch active mt-2" id="toggleAutoAssign" onclick="this.classList.toggle('active')"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="settings-card mb-6">
+                <h3 class="font-display font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="bell" class="w-5 h-5 text-charm-dark"></i> Notifications</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-white/60 rounded-xl border border-slate-100"><div><div class="text-sm font-bold text-slate-800">Sound Alerts</div><div class="text-xs text-slate-500">Play sound on scan</div></div><div class="toggle-switch active" onclick="this.classList.toggle('active')"></div></div>
+                    <div class="flex items-center justify-between p-3 bg-white/60 rounded-xl border border-slate-100"><div><div class="text-sm font-bold text-slate-800">Unauthorized Alerts</div><div class="text-xs text-slate-500">Alert on denied scans</div></div><div class="toggle-switch active" onclick="this.classList.toggle('active')"></div></div>
+                    <div class="flex items-center justify-between p-3 bg-white/60 rounded-xl border border-slate-100"><div><div class="text-sm font-bold text-slate-800">Parking Full Alert</div><div class="text-xs text-slate-500">Alert when all slots occupied</div></div><div class="toggle-switch" onclick="this.classList.toggle('active')"></div></div>
+                </div>
+            </div>
+
+            <!-- Save -->
+            <div class="flex justify-end gap-3 mb-10">
+                <button onclick="history.back()" class="px-6 py-3 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button onclick="saveSettings()" class="px-6 py-3 rounded-xl bg-charm-dark text-white text-sm font-bold hover:bg-opacity-90 shadow-md flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Save Settings</button>
+            </div>
+        </div>
+    </div>
+    <script src="supabase-config.js"></script>
+    <script>
+        initSupabase();
+        lucide.createIcons();
+        document.getElementById('settingsDbStatus').textContent = isConnected ? 'Connected' : 'Demo Mode';
+        document.getElementById('settingsDbStatus').className = `text-sm font-bold mt-1 ${isConnected?'text-green-600':'text-yellow-600'}`;
+
+        function testConnection() {
+            const btn = event.target.closest('button');
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Testing...';
+            lucide.createIcons();
+            setTimeout(() => {
+                document.getElementById('settingsDeviceStatus').textContent = 'Online';
+                document.getElementById('settingsDeviceStatus').className = 'text-sm font-bold text-green-600 mt-1';
+                btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Connected!';
+                lucide.createIcons();
+                showToast('ESP32 device connected successfully!','success');
+            }, 2000);
+        }
+
+        function saveSettings() {
+            const settings = {
+                deviceName: document.getElementById('deviceName').value,
+                deviceLocation: document.getElementById('deviceLocation').value,
+                deviceId: document.getElementById('deviceId').value,
+                buildingName: document.getElementById('buildingName').value,
+                totalSlots: document.getElementById('totalSlots').value,
+                scanCooldown: document.getElementById('scanCooldown').value,
+            };
+            localStorage.setItem('charrmpark_settings', JSON.stringify(settings));
+            showToast('Settings saved successfully!','success');
+        }
+    </script>
+</body>
+</html>

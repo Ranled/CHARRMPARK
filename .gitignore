@@ -1,0 +1,5 @@
+node_modules
+.DS_Store
+# Optional: exclude the hardware folder from the web deployment
+# esp32_rfid/
+# supabase/
