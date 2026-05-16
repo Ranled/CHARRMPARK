@@ -93,7 +93,7 @@
             </a>
 
             <!-- Guard Dashboard -->
-            <a href="guard-dashboard.html" id="card-guard" class="group relative bg-white/10 backdrop-blur-xl border-2 border-charm-yellow/50 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 transform scale-105 z-20">
+            <button onclick="openLogin('GUARD')" id="card-guard" class="group relative bg-white/10 backdrop-blur-xl border-2 border-charm-yellow/50 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 transform scale-105 z-20">
                 <div class="absolute -top-4 bg-charm-yellow text-charm-dark text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg animate-pulse-slow">Primary System</div>
                 <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 
@@ -105,10 +105,10 @@
                 <div class="relative z-10 w-full py-4 rounded-xl bg-charm-yellow text-charm-dark font-bold text-sm shadow-lg group-hover:bg-white transition-all duration-300">
                     Access Dashboard
                 </div>
-            </a>
+            </button>
 
             <!-- Admin Panel -->
-            <a href="admin-dashboard.html" id="card-admin" class="group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 hover:border-white/40">
+            <button onclick="openLogin('ADMIN')" id="card-admin" class="group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 hover:border-white/40">
                 <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div class="relative z-10 w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mb-6 group-hover:bg-purple-500/40 transition-all duration-300 border border-purple-400/30 group-hover:shadow-glow-green group-hover:scale-110">
                     <i data-lucide="shield-alert" class="w-10 h-10 text-purple-300"></i>
@@ -118,7 +118,7 @@
                 <div class="relative z-10 w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm border border-white/10 group-hover:bg-white group-hover:text-charm-dark transition-all duration-300">
                     Manage System
                 </div>
-            </a>
+            </button>
 
         </div>
 
@@ -129,9 +129,156 @@
         </div>
     </div>
 
-    <!-- Init script -->
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeLogin()"></div>
+        <div class="relative bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in">
+            <div class="bg-charm-dark p-8 text-center relative">
+                <button onclick="closeLogin()" class="absolute top-4 right-4 text-white/50 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+                <div class="w-16 h-16 bg-white/10 rounded-2xl mx-auto mb-4 flex items-center justify-center backdrop-blur-md border border-white/20">
+                    <i id="loginIcon" data-lucide="shield-check" class="w-8 h-8 text-charm-yellow"></i>
+                </div>
+                <h2 id="loginTitle" class="font-display font-bold text-2xl text-white">Guard Login</h2>
+                <p class="text-charm-light/60 text-sm mt-1">Enter your credentials to access the system</p>
+            </div>
+            <div class="p-8">
+                <form id="loginForm" class="space-y-4">
+                    <input type="hidden" id="loginRole">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Username</label>
+                        <div class="relative">
+                            <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                            <input type="text" id="username" required class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-charm-dark focus:ring-0 transition-all text-sm font-medium" placeholder="Enter username">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Password</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                            <input type="password" id="password" required class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-charm-dark focus:ring-0 transition-all text-sm font-medium" placeholder="Enter password">
+                        </div>
+                    </div>
+                    <button type="submit" id="loginBtn" class="w-full py-4 bg-charm-dark text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-charm-dark/20 transition-all active:scale-[0.98] mt-2 flex items-center justify-center gap-2">
+                        Sign In
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script>
-        lucide.createIcons();
+        // Use a more robust initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Initialize Icons immediately
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // 2. Initialize Supabase
+            let supabase;
+            try {
+                const config = initSupabase();
+                supabase = config.supabaseClient;
+            } catch (e) {
+                console.warn('Supabase init failed:', e);
+            }
+
+            // 3. Setup Modal Elements
+            const modal = document.getElementById('loginModal');
+            const loginForm = document.getElementById('loginForm');
+            const roleInput = document.getElementById('loginRole');
+            const titleEl = document.getElementById('loginTitle');
+            const iconEl = document.getElementById('loginIcon');
+
+            // Define openLogin in global scope if needed, or attach to window
+            window.openLogin = (role) => {
+                roleInput.value = role;
+                titleEl.textContent = role === 'ADMIN' ? 'Administrator Login' : 'Guard Login';
+                
+                // Update icon
+                const iconName = role === 'ADMIN' ? 'shield-alert' : 'shield-check';
+                iconEl.setAttribute('data-lucide', iconName);
+                lucide.createIcons();
+                
+                modal.classList.remove('hidden');
+                document.getElementById('username').focus();
+            };
+
+            window.closeLogin = () => {
+                modal.classList.add('hidden');
+                loginForm.reset();
+            };
+
+            // 4. Login Logic
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('loginBtn');
+                const originalText = btn.innerHTML;
+                
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const role = roleInput.value;
+
+                if (!supabase) {
+                    showToast('Database connection unavailable', 'error');
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Authenticating...';
+                lucide.createIcons();
+
+                try {
+                    const { data, error } = await supabase
+                        .from('system_accounts')
+                        .select('*')
+                        .eq('username', username)
+                        .eq('password', password)
+                        .eq('role', role)
+                        .single();
+
+                    if (error || !data) {
+                        showToast('Invalid username or password', 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        lucide.createIcons();
+                        return;
+                    }
+
+                    showToast(`Welcome back, ${data.username}!`, 'success');
+                    
+                    sessionStorage.setItem('charrmpark_session', JSON.stringify({
+                        id: data.id,
+                        username: data.username,
+                        role: data.role,
+                        timestamp: Date.now()
+                    }));
+
+                    setTimeout(() => {
+                        window.location.href = role === 'ADMIN' ? 'admin-dashboard.html' : 'guard-dashboard.html';
+                    }, 1000);
+
+                } catch (err) {
+                    console.error('Auth error:', err);
+                    showToast('Authentication failed', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    lucide.createIcons();
+                }
+            });
+
+            // 5. Check Session
+            const session = sessionStorage.getItem('charrmpark_session');
+            if (session) {
+                const s = JSON.parse(session);
+                console.log('Active session for:', s.username);
+            }
+        });
     </script>
 </body>
 </html>

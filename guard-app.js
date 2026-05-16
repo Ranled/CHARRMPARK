@@ -120,7 +120,7 @@ function renderAll() {
     if(el('gridAvail')) el('gridAvail').textContent = appState.availableSlots;
     if(el('gridOccup')) el('gridOccup').textContent = occ;
 
-    // Slots
+    // Slots Monitor - Grouped by Building/Row
     const renderSlots = (containerId) => {
         try {
             const c = el(containerId);
@@ -129,23 +129,57 @@ function renderAll() {
                 c.innerHTML = `<div class="col-span-full text-center p-8 text-slate-400">No parking slots available.</div>`;
                 return;
             }
-            c.innerHTML = appState.parkingSlots.map(s => {
-                const a = s.status === 'AVAILABLE', o = s.status === 'OCCUPIED';
-                const bg = a ? 'bg-charm-light/20 border-charm-light/40 text-charm-dark' : o ? 'bg-red-50 border-red-200 text-red-600' : 'bg-yellow-50 border-yellow-200 text-yellow-700';
-                const dot = a ? 'bg-charm-green' : o ? 'bg-red-500' : 'bg-yellow-400';
-                
-                let occupant = '';
-                if (o && s.current_vehicle) {
-                    const u = (appState.users || []).find(x => x && x.rfid_uid === s.current_vehicle);
-                    occupant = `<div class="text-[9px] font-bold mt-1 text-slate-700 truncate w-full text-center px-1">${u ? u.full_name : s.current_vehicle}</div>`;
-                }
 
-                return `<div onclick="${o?'showSlotInfo(\''+s.current_vehicle+'\')':''}" class="rounded-xl p-3 border ${bg} flex flex-col items-center justify-center slot-card relative ${o?'cursor-pointer hover:scale-105 transition-transform':''}"><div class="w-full flex justify-end mb-1"><div class="w-2 h-2 rounded-full ${dot}"></div></div><div class="text-lg font-display font-bold">${s.slot_number}</div><div class="text-[10px] font-bold uppercase mt-1 ${occupant?'hidden':''}">${s.status}</div>${occupant}</div>`;
+            // Group slots by slot_row
+            const groups = {};
+            appState.parkingSlots.forEach(s => {
+                const row = (s.slot_row || 'Other').toUpperCase();
+                if (!groups[row]) groups[row] = [];
+                groups[row].push(s);
+            });
+
+            const rows = Object.keys(groups).sort();
+
+            c.innerHTML = rows.map(row => {
+                const slots = groups[row].sort((a,b) => a.slot_number.localeCompare(b.slot_number, undefined, {numeric:true}));
+                
+                return `
+                    <div class="col-span-full glass-card rounded-2xl p-4 border border-white/60 mb-4">
+                        <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                            <i data-lucide="building-2" class="w-3 h-3"></i> ${row} BUILDING
+                        </h4>
+                        <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                            ${slots.map(s => {
+                                const a = s.status === 'AVAILABLE', o = s.status === 'OCCUPIED';
+                                const bg = a ? 'bg-charm-light/20 border-charm-light/40 text-charm-dark' : o ? 'bg-red-50 border-red-200 text-red-600' : 'bg-yellow-50 border-yellow-200 text-yellow-700';
+                                const dot = a ? 'bg-charm-green' : o ? 'bg-red-500' : 'bg-yellow-400';
+                                let occupant = '';
+                                if (o && s.current_vehicle) {
+                                    const u = (appState.users || []).find(x => x && x.rfid_uid === s.current_vehicle);
+                                    occupant = `<div class="text-[9px] font-bold mt-1 text-slate-700 truncate w-full text-center px-1">${u ? u.full_name : s.current_vehicle}</div>`;
+                                }
+                                return `<div onclick="${o?'showSlotInfo(\''+s.current_vehicle+'\')':''}" class="rounded-xl p-2 border ${bg} flex flex-col items-center justify-center slot-card relative h-20 ${o?'cursor-pointer hover:scale-105 transition-transform':''}"><div class="w-full flex justify-end mb-1"><div class="w-2 h-2 rounded-full ${dot}"></div></div><div class="text-sm font-display font-bold">${s.slot_number}</div><div class="text-[8px] font-bold uppercase mt-1 ${occupant?'hidden':''}">${s.status}</div>${occupant}</div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
             }).join('');
         } catch(e) { console.error('Render slots error:', e); }
     };
     renderSlots('liveScanSlots');
     renderSlots('monitorSlotsContainer');
+
+    // Slot selector options for entry
+    const sel = el('slotSelector');
+    if (sel) {
+        const current = sel.value;
+        const available = appState.parkingSlots.filter(s => s.status === 'AVAILABLE')
+            .sort((a,b) => a.slot_number.localeCompare(b.slot_number, undefined, {numeric:true}));
+        
+        sel.innerHTML = '<option value="">-- Choose Parking Slot --</option>' +
+            available.map(s => `<option value="${s.id}|${s.slot_number}">${s.slot_number} (${s.slot_row || 'Building'})</option>`).join('');
+        if (current) sel.value = current;
+    }
 
     if (el('logsTable')) {
         try {
@@ -542,13 +576,14 @@ if (isConnected) {
             console.log('Realtime parking_logs subscription:', status);
         });
 
-    // Listen for slot updates
+    // Listen for slot updates (including NEW slots/buildings)
     supabaseClient.channel('guard-slots')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'parking_slots' }, (payload) => {
-            console.log('🅿️ Slot updated:', payload.new);
-            const i = appState.parkingSlots.findIndex(s => s.id === payload.new.id);
-            if (i !== -1) {
-                appState.parkingSlots[i] = payload.new;
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_slots' }, async (payload) => {
+            console.log('🅿️ Slot change detected:', payload.eventType);
+            // Reload all slots to handle INSERT/DELETE properly
+            const { data: slots } = await supabaseClient.from('parking_slots').select('*');
+            if (slots) {
+                appState.parkingSlots = slots;
                 renderAll();
             }
         })

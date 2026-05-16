@@ -12,9 +12,11 @@ let isConnected = false;
 function initSupabase() {
     try {
         if (window.supabase && SUPABASE_URL) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                auth: { persistSession: false }
+            });
             isConnected = true;
-            console.log('✅ Supabase connected');
+            console.log('✅ Supabase connected (Auth persistence disabled)');
         }
     } catch (e) {
         console.warn('⚠️ Supabase not initialized. Running in Demo Mode.', e);
