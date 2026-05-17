@@ -64,7 +64,20 @@ function validateCurrentStep() {
             }
         }
     }
-    // Step 2: Photos are now OPTIONAL for easier testing
+    if (currentStep === 2) {
+        if (!photoData.profile) {
+            showToast('Please upload or take your profile picture first.', 'warning');
+            return false;
+        }
+        if (!photoData.idFront) {
+            showToast('Please upload the front of your ID card first.', 'warning');
+            return false;
+        }
+        if (!photoData.idBack) {
+            showToast('Please upload the back of your ID card first.', 'warning');
+            return false;
+        }
+    }
     if (currentStep === 3) {
         const fields = ['regVehType', 'regVehModel', 'regPlate', 'regVehColor'];
         for (const id of fields) {
@@ -267,7 +280,7 @@ function buildReview() {
     // Document thumbnails
     html += '<div class="mt-4"><div class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Uploaded Documents</div><div class="flex gap-3 flex-wrap">';
     
-    const docs = { 'Profile': photoData.profile, 'License': photoData.license, 'ID Front': photoData.idFront, 'ID Back': photoData.idBack };
+    const docs = { 'Profile': photoData.profile, 'ID Front': photoData.idFront, 'ID Back': photoData.idBack };
     for (const [label, img] of Object.entries(docs)) {
         if (img) {
             html += `<div class="text-center"><img src="${img}" alt="${label}" class="w-16 h-16 rounded-lg object-cover border border-slate-200 shadow-sm"><div class="text-[10px] font-bold text-slate-400 mt-1">${label}</div></div>`;

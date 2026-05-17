@@ -10,7 +10,7 @@ updateDBBadge();
 let appState = {
     totalVehicles: 0, entriesToday: 0, exitsToday: 0,
     availableSlots: 0, totalSlots: 10,
-    parkingSlots: [], recentScans: [], users: []
+    parkingSlots: [], recentScans: [], users: [], specialTags: []
 };
 
 // Demo users (fallback when Supabase is offline)
@@ -61,6 +61,10 @@ async function initState() {
                 appState.entriesToday = logs.filter(l => l.scan_type === 'ENTRY' && l.timestamp.startsWith(today)).length;
                 appState.exitsToday = logs.filter(l => l.scan_type === 'EXIT' && l.timestamp.startsWith(today)).length;
             }
+            const { data: st, error: ste } = await supabaseClient.from('special_tags').select('*');
+            if (ste) console.error('Special tags fetch error:', ste);
+            if (st) appState.specialTags = st;
+
             console.log('✅ Guard data loaded from Supabase');
         } catch(e) { console.error('Init error:', e); appState.parkingSlots = generateSlots(); }
     } else {
@@ -195,7 +199,27 @@ function renderAll() {
     if (el('recentScansContainer')) {
         try {
             if (appState.recentScans && appState.recentScans.length > 0) {
-                el('recentScansContainer').innerHTML = appState.recentScans.slice(0,10).map(s => `<div class="bg-white/60 p-3 rounded-xl border border-white shadow-sm flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${s.status==='AUTHORIZED'?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}"><i data-lucide="${s.status==='AUTHORIZED'?'check':'x'}" class="w-4 h-4"></i></div><div class="flex-1 overflow-hidden"><div class="flex justify-between items-center mb-0.5"><span class="font-bold text-sm text-slate-800 truncate">${s.name||'--'}</span><span class="text-[10px] font-bold text-slate-400">${s.time||'--'}</span></div><div class="flex items-center gap-2"><span class="text-xs text-slate-500 font-mono bg-slate-100 px-1.5 rounded">${(s.uid||'--').substring(0,10)}</span><span class="text-[10px] font-bold uppercase ${s.status==='AUTHORIZED'?'text-green-600':'text-red-600'}">${s.event||s.status||'--'}</span></div></div></div>`).join('');
+                el('recentScansContainer').innerHTML = appState.recentScans.slice(0,10).map(s => {
+                    const isV = s.role === 'VISITOR' || s.isVisitor;
+                    const icon = isV ? 'user' : (s.status === 'AUTHORIZED' ? 'check' : 'x');
+                    const iconBg = isV ? 'bg-blue-100 text-blue-600' : (s.status === 'AUTHORIZED' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600');
+                    return `
+                        <div class="bg-white/60 p-3 rounded-xl border border-white shadow-sm flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${iconBg}">
+                                <i data-lucide="${icon}" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex-1 overflow-hidden">
+                                <div class="flex justify-between items-center mb-0.5">
+                                    <span class="font-bold text-sm text-slate-800 truncate">${s.name||'--'}</span>
+                                    <span class="text-[10px] font-bold text-slate-400">${s.time||'--'}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-slate-500 font-mono bg-slate-100 px-1.5 rounded">${(s.uid||'--').substring(0,10)}</span>
+                                    <span class="text-[10px] font-bold uppercase ${s.status==='AUTHORIZED'?'text-green-600':'text-red-600'}">${s.event||s.status||'--'}</span>
+                                </div>
+                            </div>
+                        </div>`;
+                }).join('');
             } else {
                 el('recentScansContainer').innerHTML = `<div class="text-center text-slate-400 text-sm py-8"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>No scans yet</div>`;
             }
@@ -206,7 +230,16 @@ function renderAll() {
 
 function showSlotInfo(uid) {
     if (!uid) return;
-    const u = (appState.users || []).find(x => x.rfid_uid === uid);
+    let u = (appState.users || []).find(x => x.rfid_uid === uid);
+    const st = appState.specialTags.find(x => x.rfid_uid === uid);
+
+    if (!u && st && st.type === 'VISITOR') {
+        u = { full_name: 'Visitor', role: 'VISITOR', program: 'Guest' };
+        // Try to find the name from recent logs
+        const log = appState.recentScans.find(l => l.uid === uid && (l.visitor_name || l.name));
+        if (log) u.full_name = log.visitor_name || log.name;
+    }
+
     if (!u) return;
 
     document.getElementById('modalName').textContent = u.full_name;
@@ -216,7 +249,15 @@ function showSlotInfo(uid) {
     document.getElementById('modalVehType').textContent = u.vehicle_type || '--';
     document.getElementById('modalVehModel').textContent = u.vehicle_model || '--';
     
-    document.getElementById('modalProfileImage').src = u.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=random`;
+    const isV = u.role === 'VISITOR';
+    if (isV) {
+        document.getElementById('modalIconContainer').classList.remove('hidden');
+        document.getElementById('modalProfileImage').classList.add('hidden');
+    } else {
+        document.getElementById('modalIconContainer').classList.add('hidden');
+        document.getElementById('modalProfileImage').classList.remove('hidden');
+        document.getElementById('modalProfileImage').src = u.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=random`;
+    }
     document.getElementById('modalVehImage').src = u.motorcycle_image || 'https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&q=80&w=800';
 
     const m = document.getElementById('slotInfoModal');
@@ -309,6 +350,45 @@ async function processRFIDScan(uid, rawLogId = null) {
         userId = uid;
     }
     
+    // ---- CHECK SPECIAL TAGS ----
+    const specialTag = appState.specialTags.find(t => t.rfid_uid === uid);
+    if (specialTag) {
+        console.log('🚀 Special Tag Detected:', specialTag.type);
+        if (specialTag.type === 'EMERGENCY') {
+            result = {
+                uid: uid,
+                name: specialTag.description || 'Emergency Vehicle',
+                role: 'EMERGENCY',
+                status: 'AUTHORIZED',
+                isEmergency: true
+            };
+        } else if (specialTag.type === 'VISITOR') {
+            // Find if this visitor is already inside
+            const activeSlot = appState.parkingSlots.find(s => s.current_vehicle === uid);
+            if (activeSlot) {
+                // EXITING
+                result = {
+                    uid: uid,
+                    name: 'Visitor Tag',
+                    role: 'VISITOR',
+                    status: 'AUTHORIZED',
+                    isVisitor: true,
+                    isExit: true
+                };
+            } else {
+                // ENTERING
+                result = {
+                    uid: uid,
+                    name: 'New Visitor',
+                    role: 'VISITOR',
+                    status: 'AUTHORIZED',
+                    isVisitor: true,
+                    isEntry: true
+                };
+            }
+        }
+    }
+    
     if (!result) {
         result = { uid, name: 'Unknown Card', role: '--', program: '--', section: '--', type: '--', model: '--', plate: '--', color: '--', status: 'UNAUTHORIZED' };
     }
@@ -328,7 +408,34 @@ async function processRFIDScan(uid, rawLogId = null) {
         document.getElementById('scanStatusText').className = 'text-xl font-bold font-display text-green-600 mb-2';
         document.getElementById('radarCenter').innerHTML = '<i data-lucide="check" id="radarIcon" class="w-10 h-10 text-white"></i>';
 
-        // Check if user is already inside (EXIT logic)
+        // 1. EMERGENCY BYPASS (Highest Priority)
+        if (result.isEmergency) {
+            const occupiedSlot = appState.parkingSlots.find(s => s.current_vehicle === uid);
+            const isExit = !!occupiedSlot;
+            
+            showToast(`EMERGENCY VEHICLE ${isExit ? 'EXIT' : 'ENTRY'}!`, 'success');
+            document.getElementById('scanSubtext').textContent = isExit ? 'Emergency Exit Granted.' : 'Emergency Entry Granted.';
+            
+            if (isConnected) {
+                if (isExit) supabaseClient.from('parking_slots').update({ status: 'AVAILABLE', current_vehicle: null }).eq('id', occupiedSlot.id).then();
+                
+                const logData = { 
+                    rfid_uid: uid,
+                    scan_type: isExit ? 'EXIT' : 'ENTRY', 
+                    status: 'AUTHORIZED', 
+                    is_emergency: true, 
+                    parking_slot: isExit ? occupiedSlot.slot_number : 'EMERGENCY',
+                    remarks: 'Emergency Bypass' 
+                };
+
+                if (rawLogId) supabaseClient.from('parking_logs').update(logData).eq('id', rawLogId).then();
+                else supabaseClient.from('parking_logs').insert(logData).then();
+            }
+            setTimeout(resetScanner, 5000);
+            return;
+        }
+
+        // 2. CHECK OCCUPANCY (EXIT LOGIC)
         const occupiedSlot = appState.parkingSlots.find(s => s.current_vehicle === uid);
 
         if (occupiedSlot) {
@@ -344,25 +451,30 @@ async function processRFIDScan(uid, rawLogId = null) {
             document.getElementById('resSlotNotice').querySelector('.text-slate-700').textContent = 'Slot is now available.';
 
             if (isConnected) {
-                // Free the slot
                 supabaseClient.from('parking_slots').update({ status: 'AVAILABLE', current_vehicle: null }).eq('id', occupiedSlot.id).then();
-                // Update log
                 if (rawLogId) supabaseClient.from('parking_logs').update({ scan_type: 'EXIT', status: 'AUTHORIZED', user_id: userId, parking_slot: occupiedSlot.slot_number, remarks: 'Goodbye!' }).eq('id', rawLogId).then();
             }
             appState.exitsToday++;
             result.event = 'EXIT';
             result.slot = occupiedSlot.slot_number;
-
-            // Reset scanner shortly
             setTimeout(resetScanner, 5000);
         } else {
-            // ENTRY LOGIC - Manual Slot Assignment
+            // 3. ENTRY LOGIC - Manual Slot Assignment
             document.getElementById('scanSubtext').textContent = 'Welcome! Assign a slot.';
             document.getElementById('resStatusLabel').className = 'px-4 py-2 rounded-xl font-bold text-sm tracking-wide shadow-sm border bg-green-50 border-green-200 text-green-700';
             document.getElementById('resStatusLabel').innerHTML = '✓ ENTRY AUTHORIZED';
             document.getElementById('resBadge').className = 'absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white text-white shadow-md bg-green-500';
             
-            // Populate Dropdown
+            pendingLogId = rawLogId;
+            pendingUserResult = { ...result, userId };
+
+            // VISITOR HANDLING
+            if (result.isVisitor && result.isEntry) {
+                openVisitorModal(uid, rawLogId);
+                return;
+            }
+
+            // Populate Dropdown for regular users
             const selector = document.getElementById('slotSelector');
             selector.innerHTML = '';
             const availableSlots = appState.parkingSlots.filter(s => s.status === 'AVAILABLE');
@@ -380,10 +492,6 @@ async function processRFIDScan(uid, rawLogId = null) {
             
             document.getElementById('slotAssignmentUI').classList.remove('hidden');
             document.getElementById('slotAssignmentUI').classList.add('flex');
-            
-            pendingLogId = rawLogId;
-            pendingUserResult = { ...result, userId };
-            // Wait for Guard to click "Confirm Entry"
         }
     } else {
         // UNAUTHORIZED
@@ -406,8 +514,16 @@ async function processRFIDScan(uid, rawLogId = null) {
     }
 
     // Show user info
-    const profileSrc = result.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(result.name)}&background=random&color=fff&size=200`;
-    document.getElementById('resProfileImage').src = profileSrc;
+    const isVisitor = result.role === 'VISITOR' || result.isVisitor;
+    if (isVisitor) {
+        document.getElementById('resIconContainer').classList.remove('hidden');
+        document.getElementById('resProfileImage').classList.add('hidden');
+    } else {
+        document.getElementById('resIconContainer').classList.add('hidden');
+        document.getElementById('resProfileImage').classList.remove('hidden');
+        const profileSrc = result.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(result.name)}&background=random&color=fff&size=200`;
+        document.getElementById('resProfileImage').src = profileSrc;
+    }
     document.getElementById('resName').textContent = result.name;
     document.getElementById('resRole').textContent = result.role;
     document.getElementById('resProgram').textContent = result.program || '--';
@@ -454,10 +570,20 @@ document.getElementById('btnConfirmAssign')?.addEventListener('click', () => {
     
     if (isConnected) {
         supabaseClient.from('parking_slots').update({ status: 'OCCUPIED', current_vehicle: pendingUserResult.uid }).eq('id', slotId).then();
+        const logData = {
+            scan_type: 'ENTRY',
+            status: 'AUTHORIZED',
+            user_id: pendingUserResult.userId || null,
+            rfid_uid: pendingUserResult.uid,
+            parking_slot: slotNumber,
+            visitor_name: pendingUserResult.isVisitor ? pendingUserResult.name : null,
+            remarks: pendingUserResult.isVisitor ? 'Visitor Entry' : 'Welcome!'
+        };
+
         if (pendingLogId) {
-            supabaseClient.from('parking_logs').update({ scan_type: 'ENTRY', status: 'AUTHORIZED', user_id: pendingUserResult.userId, parking_slot: slotNumber, remarks: 'Welcome!' }).eq('id', pendingLogId).then();
+            supabaseClient.from('parking_logs').update(logData).eq('id', pendingLogId).then();
         } else {
-            supabaseClient.from('parking_logs').insert({ scan_type: 'ENTRY', status: 'AUTHORIZED', user_id: pendingUserResult.userId, rfid_uid: pendingUserResult.uid, parking_slot: slotNumber, remarks: 'Manual Scan' }).then();
+            supabaseClient.from('parking_logs').insert(logData).then();
         }
     }
     
@@ -601,7 +727,56 @@ if (isConnected) {
             showToast(`New registration: ${payload.new.full_name}`, 'info');
         })
         .subscribe();
+
+    // Listen for special tags
+    supabaseClient.channel('guard-special')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'special_tags' }, async () => {
+            const { data: st } = await supabaseClient.from('special_tags').select('*');
+            if (st) appState.specialTags = st;
+        })
+        .subscribe();
 }
+
+// =====================
+// VISITOR ACTIONS
+// =====================
+let visitorPendingUid = null;
+let visitorPendingLogId = null;
+
+window.openVisitorModal = function(uid, logId) {
+    visitorPendingUid = uid;
+    visitorPendingLogId = logId;
+    document.getElementById('visitorNameInput').value = '';
+    const m = document.getElementById('visitorModal');
+    m.classList.remove('hidden');
+    setTimeout(() => { m.classList.remove('opacity-0'); m.firstElementChild.classList.remove('scale-95'); }, 10);
+};
+
+window.closeVisitorModal = function() {
+    const m = document.getElementById('visitorModal');
+    m.classList.add('opacity-0'); m.firstElementChild.classList.add('scale-95');
+    setTimeout(() => { m.classList.add('hidden'); resetScanner(); }, 300);
+};
+
+window.confirmVisitorEntry = async function() {
+    const name = document.getElementById('visitorNameInput').value.trim();
+    if (!name) { showToast('Please enter visitor name.', 'warning'); return; }
+    
+    // Now show slot assignment UI
+    closeVisitorModal();
+    
+    // Update pending result name
+    if (pendingUserResult) {
+        pendingUserResult.name = name;
+        document.getElementById('resName').textContent = name;
+    }
+
+    document.getElementById('scanSubtext').textContent = `Visitor: ${name}. Assign slot.`;
+    document.getElementById('slotAssignmentUI').classList.remove('hidden');
+    document.getElementById('slotAssignmentUI').classList.add('flex');
+    
+    showToast(`Visitor ${name} identified. Now select a parking slot.`, 'info');
+};
 
 // =====================
 // GUARD PROFILE EDIT

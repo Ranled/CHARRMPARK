@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS public.users (
     plate_number TEXT UNIQUE,
     vehicle_color TEXT,
     profile_image TEXT,
+    drivers_license_image TEXT,
+    id_front_image TEXT,
+    id_back_image TEXT,
     motorcycle_image TEXT,
     authorization_status TEXT DEFAULT 'PENDING' CHECK (authorization_status IN ('PENDING', 'AUTHORIZED', 'DENIED')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -52,10 +55,21 @@ CREATE TABLE IF NOT EXISTS public.parking_logs (
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     parking_slot TEXT,
     guard_id UUID,
-    remarks TEXT
+    remarks TEXT,
+    visitor_name TEXT,
+    is_emergency BOOLEAN DEFAULT FALSE
 );
 
--- D. SYSTEM ACCOUNTS (RBAC)
+-- E. SPECIAL TAGS TABLE (Visitor & Emergency)
+CREATE TABLE IF NOT EXISTS public.special_tags (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    rfid_uid TEXT UNIQUE NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('VISITOR', 'EMERGENCY')),
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- F. SYSTEM ACCOUNTS (RBAC)
 CREATE TABLE IF NOT EXISTS public.system_accounts (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
@@ -64,7 +78,7 @@ CREATE TABLE IF NOT EXISTS public.system_accounts (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- E. DEVICES TABLE
+-- G. DEVICES TABLE
 CREATE TABLE IF NOT EXISTS public.devices (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     device_name TEXT NOT NULL,
@@ -84,6 +98,7 @@ ALTER TABLE public.parking_slots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parking_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.special_tags ENABLE ROW LEVEL SECURITY;
 
 -- Create "Allow All" policies for anonymous access (Development Mode)
 DROP POLICY IF EXISTS "Allow anon access users" ON public.users;
@@ -101,6 +116,9 @@ CREATE POLICY "Allow anon access accounts" ON public.system_accounts FOR ALL USI
 DROP POLICY IF EXISTS "Allow anon access devices" ON public.devices;
 CREATE POLICY "Allow anon access devices" ON public.devices FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon access special_tags" ON public.special_tags;
+CREATE POLICY "Allow anon access special_tags" ON public.special_tags FOR ALL USING (true) WITH CHECK (true);
+
 -- ============================================
 -- 4. REALTIME CONFIGURATION
 -- ============================================
@@ -109,6 +127,7 @@ CREATE POLICY "Allow anon access devices" ON public.devices FOR ALL USING (true)
 ALTER TABLE public.parking_slots REPLICA IDENTITY FULL;
 ALTER TABLE public.users REPLICA IDENTITY FULL;
 ALTER TABLE public.parking_logs REPLICA IDENTITY FULL;
+ALTER TABLE public.special_tags REPLICA IDENTITY FULL;
 
 DO $$
 BEGIN
@@ -128,6 +147,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'parking_logs') THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.parking_logs;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'special_tags') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.special_tags;
     END IF;
 END $$;
 

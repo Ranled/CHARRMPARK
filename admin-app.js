@@ -5,7 +5,7 @@
 initSupabase(); startClock(); updateDBBadge();
 const el = id => document.getElementById(id);
 
-let adminState = { users: [], pendingUsers: [], logs: [], slots: [], accounts: [] };
+let adminState = { users: [], pendingUsers: [], logs: [], slots: [], accounts: [], specialTags: [] };
 
 // Demo data (fallback)
 const demoUsers = [
@@ -109,7 +109,11 @@ async function loadData() {
             if (acce) console.error('Accounts error:', acce);
             if(acc) adminState.accounts = acc;
 
-            console.log('✅ Admin data refreshed:', adminState.users.length, 'users,', adminState.logs.length, 'logs');
+            const {data:st, error:ste} = await supabaseClient.from('special_tags').select('*');
+            if (ste) console.error('Special tags error:', ste);
+            if(st) adminState.specialTags = st;
+
+            console.log('✅ Admin data refreshed:', adminState.users.length, 'users,', adminState.logs.length, 'logs,', adminState.specialTags.length, 'special tags');
         } catch(e) {
             console.error('CRITICAL LOAD ERROR:', e);
             showToast('Database Error: ' + e.message, 'error');
@@ -135,9 +139,33 @@ function renderAdmin() {
     if(el('adminStatEntries')) el('adminStatEntries').textContent = adminState.logs.filter(l => l.scan_type === 'ENTRY').length || 0;
     if(el('adminStatSlots')) el('adminStatSlots').textContent = `${adminState.slots.length-occ}/${adminState.slots.length}`;
 
+    // Update charts if viewing analytics
+    const analyticsView = el('aview-analytics');
+    if (analyticsView && !analyticsView.classList.contains('hidden')) {
+        initCharts();
+    }
+
     // Pending table
     if(el('pendingTable')) {
-        el('pendingTable').innerHTML = adminState.pendingUsers.length ? adminState.pendingUsers.map(u=>`<tr class="hover:bg-white/60 border-b border-slate-100/50"><td class="p-4 font-bold text-slate-800">${u.full_name}</td><td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-slate-200 text-slate-700 uppercase">${u.role}</span></td><td class="p-4 text-sm text-slate-600">${u.vehicle_type||'--'} - ${u.vehicle_model||'--'}</td><td class="p-4 text-sm text-slate-500">${u.created_at?new Date(u.created_at).toLocaleDateString():'--'}</td><td class="p-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">PENDING</span></td><td class="p-4 text-right whitespace-nowrap"><button onclick="approveUser('${u.id}')" class="px-3 py-1.5 rounded-lg bg-charm-green text-white text-xs font-bold hover:bg-green-600 mr-1">Approve</button><button onclick="denyRegistration('${u.id}')" class="px-3 py-1.5 rounded-lg bg-charm-red text-white text-xs font-bold hover:bg-red-600">Deny</button></td></tr>`).join('') : '<tr><td colspan="6" class="p-8 text-center text-slate-400">No pending registrations</td></tr>';
+        el('pendingTable').innerHTML = adminState.pendingUsers.length ? adminState.pendingUsers.map(u => `
+            <tr class="hover:bg-white/60 border-b border-slate-100/50 transition-colors">
+                <td class="p-4">
+                    <div class="flex items-center gap-3">
+                        <img src="${u.profile_image || 'https://ui-avatars.com/api/?name='+encodeURIComponent(u.full_name)}" class="w-8 h-8 rounded-lg object-cover">
+                        <div class="font-bold text-slate-800">${u.full_name}</div>
+                    </div>
+                </td>
+                <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-slate-200 text-slate-700 uppercase">${u.role}</span></td>
+                <td class="p-4 text-sm text-slate-600">${u.vehicle_type||'--'} - ${u.vehicle_model||'--'}</td>
+                <td class="p-4 text-sm text-slate-500">${u.created_at?new Date(u.created_at).toLocaleDateString():'--'}</td>
+                <td class="p-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">PENDING</span></td>
+                <td class="p-4 text-right whitespace-nowrap">
+                    <button onclick="openReviewModal('${u.id}')" class="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors mr-1">Review</button>
+                    <button onclick="approveUser('${u.id}')" class="px-3 py-1 bg-charm-green text-white rounded-lg text-xs font-bold hover:bg-green-600 mr-1">Approve</button>
+                    <button onclick="denyRegistration('${u.id}')" class="px-3 py-1 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600">Deny</button>
+                </td>
+            </tr>
+        `).join('') : '<tr><td colspan="6" class="p-8 text-center text-slate-400">No pending registrations</td></tr>';
     }
 
     // Users table
@@ -236,27 +264,69 @@ function renderAdmin() {
         }
     }
 
-    // Ranking Tables
+    // Ranking Tables (respecting timeframe)
+    const now = new Date();
+    let filteredLogs = adminState.logs;
+    if (analyticsRange === 'day') {
+        filteredLogs = adminState.logs.filter(l => {
+            const d = new Date(l.timestamp);
+            return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+    } else if (analyticsRange === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        filteredLogs = adminState.logs.filter(l => new Date(l.timestamp) >= weekAgo);
+    } else if (analyticsRange === 'month') {
+        filteredLogs = adminState.logs.filter(l => {
+            const d = new Date(l.timestamp);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+    } else if (analyticsRange === 'annual') {
+        filteredLogs = adminState.logs.filter(l => new Date(l.timestamp).getFullYear() === now.getFullYear());
+    }
+
     if (el('studentRankingTable')) {
-        const studentLogs = adminState.logs.filter(l => l.users?.role === 'Student');
+        const studentLogs = filteredLogs.filter(l => l.users?.role === 'Student');
         const counts = {};
         studentLogs.forEach(l => { const name = l.users?.full_name; if(name) counts[name] = (counts[name] || 0) + 1; });
         const ranked = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
         el('studentRankingTable').innerHTML = ranked.length ? ranked.map(([name, count], i) => {
             const u = adminState.users.find(x => x.full_name === name);
             return `<tr class="border-b border-slate-50"><td class="p-3 text-center font-bold text-charm-dark">${i+1}</td><td class="p-3 font-semibold">${name}</td><td class="p-3 text-center text-slate-500">${u?.program||'--'}</td><td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-slate-100 font-bold text-slate-700">${count}</span></td></tr>`;
-        }).join('') : '<tr><td colspan="4" class="p-8 text-center text-slate-300">No activity yet</td></tr>';
+        }).join('') : '<tr><td colspan="4" class="p-8 text-center text-slate-300">No activity in this period</td></tr>';
     }
 
     if (el('facultyRankingTable')) {
-        const facultyLogs = adminState.logs.filter(l => l.users?.role === 'Faculty' || l.users?.role === 'Staff');
+        const facultyLogs = filteredLogs.filter(l => l.users?.role === 'Faculty' || l.users?.role === 'Staff');
         const counts = {};
         facultyLogs.forEach(l => { const name = l.users?.full_name; if(name) counts[name] = (counts[name] || 0) + 1; });
         const ranked = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
         el('facultyRankingTable').innerHTML = ranked.length ? ranked.map(([name, count], i) => {
             const u = adminState.users.find(x => x.full_name === name);
             return `<tr class="border-b border-slate-50"><td class="p-3 text-center font-bold text-charm-mid">${i+1}</td><td class="p-3 font-semibold">${name}</td><td class="p-3 text-center text-slate-500">${u?.role||'--'}</td><td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-slate-100 font-bold text-slate-700">${count}</span></td></tr>`;
-        }).join('') : '<tr><td colspan="4" class="p-8 text-center text-slate-300">No activity yet</td></tr>';
+        }).join('') : '<tr><td colspan="4" class="p-8 text-center text-slate-300">No activity in this period</td></tr>';
+    }
+
+    // Special Tags
+    if (el('specialTagsTable')) {
+        const table = el('specialTagsTable');
+        if (adminState.specialTags.length) {
+            table.innerHTML = adminState.specialTags.map(t => {
+                const typeClass = t.type === 'VISITOR' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
+                return `
+                    <tr class="hover:bg-white/60 border-b border-slate-100/50 transition-colors">
+                        <td class="p-4 font-mono font-bold text-slate-700">${t.rfid_uid}</td>
+                        <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${typeClass}">${t.type}</span></td>
+                        <td class="p-4 text-slate-500">${t.description || '--'}</td>
+                        <td class="p-4 text-right whitespace-nowrap">
+                            <button onclick="editSpecialTag('${t.id}')" class="p-2 text-slate-400 hover:text-charm-dark transition-colors"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                            <button onclick="deleteSpecialTag('${t.id}')" class="p-2 text-slate-400 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            table.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400">No special tags configured</td></tr>';
+        }
     }
     
     lucide.createIcons();
@@ -470,30 +540,101 @@ window.deleteSlot = async function(id, status) {
 // ANALYTICS
 // =====================
 let chart1, chart2, chart3;
+let analyticsRange = 'day';
+
+window.setAnalyticsRange = function(range) {
+    analyticsRange = range;
+    document.querySelectorAll('.analytics-tab').forEach(btn => btn.classList.remove('active-range'));
+    document.getElementById(`tab-${range}`).classList.add('active-range');
+    initCharts();
+};
+
 function initCharts() {
     if(!window.Chart) return;
-    const students = adminState.users.filter(u=>u.role==='Student').length;
-    const faculty = adminState.users.filter(u=>u.role==='Faculty').length;
-    const staff = adminState.users.filter(u=>u.role==='Staff').length;
+    
+    // 1. Filter logs based on range
+    const now = new Date();
+    let filteredLogs = adminState.logs;
+    
+    if (analyticsRange === 'day') {
+        filteredLogs = adminState.logs.filter(l => {
+            const d = new Date(l.timestamp);
+            return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+    } else if (analyticsRange === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        filteredLogs = adminState.logs.filter(l => new Date(l.timestamp) >= weekAgo);
+    } else if (analyticsRange === 'month') {
+        filteredLogs = adminState.logs.filter(l => {
+            const d = new Date(l.timestamp);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+    } else if (analyticsRange === 'annual') {
+        filteredLogs = adminState.logs.filter(l => new Date(l.timestamp).getFullYear() === now.getFullYear());
+    }
+
+    // 2. Unique Activity Distribution (Unique entities per timeframe)
+    const unique = { Student: new Set(), Faculty: new Set(), Staff: new Set(), Visitor: new Set(), Emergency: new Set() };
+    
+    filteredLogs.forEach(l => {
+        if (l.is_emergency) {
+            unique.Emergency.add(l.rfid_uid);
+        } else if (l.visitor_name) {
+            // Visitor uniqueness by name + UID
+            unique.Visitor.add(l.visitor_name + (l.rfid_uid || ''));
+        } else if (l.users) {
+            const role = l.users.role;
+            const uid = l.user_id || l.rfid_uid;
+            if (role && unique[role]) {
+                unique[role].add(uid);
+            }
+        }
+    });
+
+    const dataPoints = [
+        unique.Student.size,
+        unique.Faculty.size,
+        unique.Staff.size,
+        unique.Visitor.size,
+        unique.Emergency.size
+    ];
+
     const ctx1 = el('chartUserTypes');
     if(ctx1) {
         if(chart1) chart1.destroy();
-        chart1 = new Chart(ctx1,{type:'doughnut',data:{labels:['Students','Faculty','Staff'],datasets:[{data:[students,faculty,staff],backgroundColor:['#0E4B3A','#1F6B4F','#F2B827'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+        chart1 = new Chart(ctx1,{
+            type:'doughnut',
+            data:{
+                labels:['Students','Faculty','Staff', 'Visitors', 'Emergency'],
+                datasets:[{
+                    data: dataPoints,
+                    backgroundColor:['#0E4B3A','#1F6B4F','#F2B827', '#3B82F6', '#EF4444'],
+                    borderWidth:0
+                }]
+            },
+            options:{
+                responsive:true,
+                maintainAspectRatio:false,
+                plugins:{legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}}}}
+            }
+        });
     }
 
+    // 3. Entry vs Exit
     const ctx2 = el('chartEntryExit');
     if(ctx2) {
         if(chart2) chart2.destroy();
-        const entries = adminState.logs.filter(l => l.scan_type === 'ENTRY').length;
-        const exits = adminState.logs.filter(l => l.scan_type === 'EXIT').length;
+        const entries = filteredLogs.filter(l => l.scan_type === 'ENTRY').length;
+        const exits = filteredLogs.filter(l => l.scan_type === 'EXIT').length;
         chart2 = new Chart(ctx2,{type:'bar',data:{labels:['Entries','Exits'],datasets:[{label:'Total Activity',data:[entries,exits],backgroundColor:['#22C55E','#EF4444'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{display:false}}}}});
     }
 
+    // 4. Peak Hours
     const ctx3 = el('chartPeakHours');
     if(ctx3) {
         if(chart3) chart3.destroy();
         const hours = Array(24).fill(0);
-        adminState.logs.forEach(l => { if(l.timestamp) { const h = new Date(l.timestamp).getHours(); hours[h]++; } });
+        filteredLogs.forEach(l => { if(l.timestamp) { const h = new Date(l.timestamp).getHours(); hours[h]++; } });
         chart3 = new Chart(ctx3,{type:'line',data:{labels:hours.map((_,i)=>i+':00'),datasets:[{label:'Activity',data:hours,borderColor:'#1F6B4F',backgroundColor:'rgba(31,107,79,0.1)',fill:true,tension:0.4,borderWidth:3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
     }
 }
@@ -506,9 +647,112 @@ function setupRealtime() {
     supabaseClient.channel('admin-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_slots' }, () => { loadData(); })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { loadData(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'special_tags' }, () => { loadData(); })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'parking_logs' }, () => { loadData(); })
         .subscribe();
 }
+
+// Special Tag Modal Actions
+window.openSpecialTagModal = function(id = null) {
+    const modal = el('specialTagModal');
+    el('specialTagForm').reset();
+    el('formTagId').value = '';
+    el('specialTagModalTitle').textContent = id ? 'Edit Special Tag' : 'Add Special Tag';
+    
+    if (id) {
+        const tag = adminState.specialTags.find(t => t.id === id);
+        if (tag) {
+            el('formTagId').value = tag.id;
+            el('formTagUid').value = tag.rfid_uid;
+            el('formTagType').value = tag.type;
+            el('formTagDesc').value = tag.description || '';
+        }
+    }
+
+    modal.classList.remove('hidden');
+    setTimeout(() => { modal.classList.add('opacity-100'); el('specialTagModalContent').classList.remove('scale-95'); }, 10);
+    lucide.createIcons();
+};
+
+window.closeSpecialTagModal = function() {
+    const modal = el('specialTagModal');
+    modal.classList.remove('opacity-100'); el('specialTagModalContent').classList.add('scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+};
+
+window.editSpecialTag = function(id) { editSpecialTagId = id; openSpecialTagModal(id); };
+
+el('specialTagForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = el('formTagId').value;
+    const data = {
+        rfid_uid: el('formTagUid').value.trim().toUpperCase(),
+        type: el('formTagType').value,
+        description: el('formTagDesc').value.trim()
+    };
+    try {
+        showToast('Saving tag...', 'info');
+        const { error } = await supabaseClient.from('special_tags').upsert({ id: id || undefined, ...data });
+        if (error) throw error;
+        showToast('Special tag saved!', 'success');
+        closeSpecialTagModal(); await loadData();
+    } catch(err) { showToast('Error: ' + err.message, 'error'); }
+});
+
+window.deleteSpecialTag = async function(id) {
+    if (!confirm('Delete this special tag?')) return;
+    try {
+        const { error } = await supabaseClient.from('special_tags').delete().eq('id', id);
+        if (error) throw error;
+        showToast('Tag deleted.', 'success');
+        await loadData();
+    } catch(err) { showToast('Error: ' + err.message, 'error'); }
+};
+
+// Review Registration Logic
+window.openReviewModal = function(id) {
+    const u = adminState.pendingUsers.find(x => x.id === id);
+    if (!u) return;
+
+    el('revName').textContent = u.full_name;
+    el('revRoleBadge').textContent = u.role;
+    el('revRoleBadge').className = `mt-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${u.role === 'Student' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`;
+    el('revAge').textContent = u.age || '--';
+    el('revSex').textContent = u.sex || '--';
+    el('revProgram').textContent = `${u.program || '--'} • ${u.section || '--'}`;
+    el('revAddress').textContent = u.address || 'No address provided';
+    el('revPlate').textContent = u.plate_number || '--';
+    el('revVehType').textContent = u.vehicle_type || '--';
+    el('revVehDetails').textContent = `${u.vehicle_model || '--'} (${u.vehicle_color || '--'})`;
+
+    const placeholder = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.full_name) + '&background=random';
+    el('revProfileImage').src = u.profile_image || placeholder;
+    el('revImgMotor').src = u.motorcycle_image || 'https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&q=60&w=400';
+    el('revImgIdFront').src = u.id_front_image || 'https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=60&w=400';
+    el('revImgIdBack').src = u.id_back_image || 'https://images.unsplash.com/photo-1621252179027-94459d278660?auto=format&fit=crop&q=60&w=400';
+
+    // Buttons
+    el('revBtnApprove').onclick = () => { closeReviewModal(); approveUser(u.id); };
+    el('revBtnDeny').onclick = () => { closeReviewModal(); denyRegistration(u.id); };
+
+    const modal = el('reviewModal');
+    modal.classList.remove('hidden');
+    setTimeout(() => { modal.classList.add('opacity-100'); el('reviewModalContent').classList.remove('scale-95'); }, 10);
+    lucide.createIcons();
+};
+
+window.closeReviewModal = function() {
+    const modal = el('reviewModal');
+    modal.classList.remove('opacity-100'); el('reviewModalContent').classList.add('scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+};
+
+window.zoomImage = function(container) {
+    const img = container.querySelector('img');
+    if (!img || !img.src) return;
+    el('zoomImg').src = img.src;
+    el('zoomModal').classList.remove('hidden');
+};
 
 // Account Modal logic
 window.openAccountModal = function(id) {
