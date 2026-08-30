@@ -1,5 +1,17 @@
-node_modules
+node_modules/
 .DS_Store
-# Optional: exclude the hardware folder from the web deployment
-# esp32_rfid/
-# supabase/
+Thumbs.db
+
+# ─── SENSITIVE CONFIG (never commit) ───────────────
+# Copy supabase-config.example.js → supabase-config.js and fill in your keys
+supabase-config.js
+
+# ─── LARGE MEDIA / LOCAL ASSETS ────────────────────
+*.mp4
+logocharrmpark.png
+landingbg.jpg
+
+# ─── EDITOR / OS ───────────────────────────────────
+.vscode/
+*.suo
+*.user

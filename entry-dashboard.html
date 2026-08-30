@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CHARRMPASS — Entry Gate</title>
+  <meta name="description" content="CHARRMPASS Entry Gate Monitor Dashboard" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b1220;
+      --surface:   rgba(255,255,255,0.04);
+      --border:    rgba(255,255,255,0.09);
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --accent:    #22c55e;
+      --accent-dk: #16a34a;
+      --denied:    #ef4444;
+      --denied-dk: #b91c1c;
+      --warning:   #f59e0b;
+    }
+
+    html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+
+    /* ─── ANIMATED BACKGROUND ─── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 10% 20%, rgba(34,197,94,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 90% 80%, rgba(34,197,94,0.05) 0%, transparent 60%),
+        linear-gradient(160deg, #0b1220 0%, #0d1c10 50%, #0b1220 100%);
+    }
+
+    /* ─── LOGIN SCREEN ─── */
+    #loginScreen {
+      position: fixed; inset: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(34,197,94,0.1) 0%, transparent 70%), #0b1220;
+    }
+    .login-card {
+      position: relative; z-index: 1;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(34,197,94,0.25);
+      border-radius: 24px;
+      padding: 48px 40px;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .login-logo { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900; color: var(--accent); letter-spacing: 1.5px; }
+    .login-gate-badge { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent); background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); border-radius: 20px; padding: 3px 10px; }
+    .login-title { font-size: 28px; font-weight: 800; color: #fff; margin: 20px 0 6px; font-family: 'Outfit', sans-serif; }
+    .login-sub   { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+    .login-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
+    .login-input {
+      width: 100%; padding: 12px 16px; border-radius: 10px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: var(--text); font-size: 14px; font-family: 'Inter', sans-serif;
+      outline: none; margin-bottom: 16px; transition: border 0.2s;
+    }
+    .login-input:focus { border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.05); }
+    .login-btn {
+      width: 100%; padding: 14px; border: none; border-radius: 10px; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dk));
+      color: #fff; font-size: 15px; font-weight: 700; font-family: 'Outfit', sans-serif;
+      letter-spacing: 1px; transition: opacity 0.2s, transform 0.1s;
+      box-shadow: 0 4px 20px rgba(34,197,94,0.35);
+    }
+    .login-btn:hover  { opacity: 0.9; }
+    .login-btn:active { transform: scale(0.98); }
+    .login-error { font-size: 12px; color: var(--denied); margin-top: 10px; text-align: center; min-height: 16px; }
+
+    /* ─── DASHBOARD ─── */
+    #dashboard {
+      position: relative; z-index: 1;
+      height: 100vh; display: flex; flex-direction: column; padding: 12px 16px 12px; gap: 12px;
+    }
+    #dashboard.hidden { display: none; }
+
+    /* ─── HEADER ─── */
+    .hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,0.04); backdrop-filter: blur(16px);
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 10px 18px; flex-shrink: 0;
+    }
+    .hdr-left   { display: flex; align-items: center; gap: 12px; }
+    .hdr-logo   { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 900; color: var(--accent); letter-spacing: 1px; }
+    .hdr-badge  { font-size: 10px; font-weight: 800; letter-spacing: 2px; background: rgba(34,197,94,0.15); color: var(--accent); border: 1px solid rgba(34,197,94,0.35); border-radius: 20px; padding: 3px 10px; }
+    .hdr-right  { display: flex; align-items: center; gap: 14px; }
+    .hdr-guard  { font-size: 12px; font-weight: 600; color: var(--text); opacity: 0.7; }
+    .hdr-online { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+    .hdr-online .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse-green 1.5s infinite; }
+    @keyframes pulse-green { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+    .hdr-online.offline .dot { background: var(--denied); animation: none; }
+    .btn-logout {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 5px 12px; border-radius: 8px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-logout:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: var(--denied); }
+
+    /* ─── MAIN CONTENT ─── */
+    .main-grid {
+      flex: 1; display: grid;
+      grid-template-columns: 1fr 340px;
+      grid-template-rows: 1fr auto;
+      gap: 12px; min-height: 0;
+    }
+
+    /* ─── SCAN PANEL ─── */
+    .scan-panel {
+      grid-row: 1 / span 2;
+      background: rgba(255,255,255,0.04); backdrop-filter: blur(20px);
+      border: 1px solid var(--border); border-radius: 18px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: relative; overflow: hidden; min-height: 0;
+    }
+
+    /* Ready state */
+    .ready-state { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .radar-ring {
+      width: 120px; height: 120px; border-radius: 50%;
+      border: 2px solid rgba(34,197,94,0.25);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; animation: radar-outer 2s ease-in-out infinite;
+    }
+    @keyframes radar-outer { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.2)} 50%{box-shadow:0 0 0 20px rgba(34,197,94,0)} }
+    .radar-inner {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.35);
+      display: flex; align-items: center; justify-content: center;
+      animation: radar-inner 2s ease-in-out infinite 0.3s;
+    }
+    @keyframes radar-inner { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.3)} 50%{box-shadow:0 0 0 10px rgba(34,197,94,0)} }
+    .radar-icon { color: var(--accent); width: 36px; height: 36px; }
+    .ready-title { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 1px; }
+    .ready-sub   { font-size: 13px; color: var(--muted); }
+
+    /* Scan result */
+    .scan-result {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px; gap: 18px; position: absolute; inset: 0;
+    }
+    .scan-result.authorized { background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, transparent 70%); }
+    .scan-result.denied     { background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, transparent 70%); }
+
+    .scan-profile-wrap { position: relative; }
+    .scan-avatar {
+      width: 90px; height: 90px; border-radius: 50%; object-fit: cover;
+      border: 3px solid var(--accent); box-shadow: 0 0 24px rgba(34,197,94,0.3);
+    }
+    .scan-avatar.denied { border-color: var(--denied); box-shadow: 0 0 24px rgba(239,68,68,0.3); }
+    .scan-avatar-icon {
+      width: 90px; height: 90px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(239,68,68,0.1); border: 3px solid var(--denied);
+    }
+    .scan-status-badge {
+      position: absolute; bottom: -4px; right: -4px;
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2px solid #0b1220; display: flex; align-items: center; justify-content: center;
+    }
+    .scan-status-badge.ok   { background: var(--accent); }
+    .scan-status-badge.deny { background: var(--denied); }
+
+    .scan-name    { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 800; color: #fff; text-align: center; }
+    .scan-details { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .scan-detail-row { font-size: 13px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; }
+    .scan-detail-row strong { color: var(--text); }
+    .scan-plate {
+      font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px; padding: 6px 16px; letter-spacing: 2px; color: #fff;
+    }
+    .scan-verdict {
+      margin-top: 4px; padding: 10px 28px; border-radius: 100px;
+      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 800;
+      letter-spacing: 2px; display: flex; align-items: center; gap: 8px;
+    }
+    .scan-verdict.ok   { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: var(--accent); }
+    .scan-verdict.deny { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: var(--denied); }
+    .scan-time { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+    /* Panel overlay glow ring */
+    .scan-panel.authorized { border-color: rgba(34,197,94,0.4); }
+    .scan-panel.denied     { border-color: rgba(239,68,68,0.4); }
+
+    /* ─── RECENT ACTIVITY ─── */
+    .recent-panel {
+      background: rgba(255,255,255,0.04); backdrop-filter: blur(20px);
+      border: 1px solid var(--border); border-radius: 18px;
+      display: flex; flex-direction: column; overflow: hidden; min-height: 0;
+    }
+    .recent-hdr { padding: 14px 18px 10px; flex-shrink: 0; }
+    .recent-hdr h3 { font-size: 11px; font-weight: 800; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+    .recent-body { flex: 1; overflow-y: auto; padding: 0 4px 8px; }
+    .recent-body::-webkit-scrollbar { width: 4px; }
+    .recent-body::-webkit-scrollbar-track { background: transparent; }
+    .recent-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+    .scan-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 10px; transition: background 0.15s;
+    }
+    .scan-row:hover { background: rgba(255,255,255,0.04); }
+    .scan-row-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .scan-row-dot.ok   { background: var(--accent); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .scan-row-dot.deny { background: var(--denied); }
+    .scan-row-info { flex: 1; overflow: hidden; }
+    .scan-row-name  { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .scan-row-plate { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+    .scan-row-time  { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--muted); flex-shrink: 0; }
+    .scan-empty { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 13px; }
+
+    /* ─── CONTROLS ─── */
+    .controls-panel {
+      background: rgba(255,255,255,0.04); backdrop-filter: blur(20px);
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px 16px; display: flex; gap: 10px; align-items: center; flex-shrink: 0;
+    }
+    .manual-input-wrap { flex: 1; display: flex; gap: 8px; }
+    .manual-input {
+      flex: 1; padding: 10px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: var(--text); font-size: 13px; font-family: 'JetBrains Mono', monospace;
+      outline: none; letter-spacing: 1px; transition: border 0.2s;
+    }
+    .manual-input::placeholder { color: var(--muted); font-family: 'Inter', sans-serif; letter-spacing: 0; font-size: 12px; }
+    .manual-input:focus { border-color: rgba(34,197,94,0.4); }
+    .btn-process {
+      padding: 10px 18px; border-radius: 10px; cursor: pointer; border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dk));
+      color: #fff; font-size: 12px; font-weight: 700; letter-spacing: 1px;
+      font-family: 'Outfit', sans-serif; transition: opacity 0.2s;
+      box-shadow: 0 2px 10px rgba(34,197,94,0.3);
+    }
+    .btn-process:hover { opacity: 0.85; }
+    .divider { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
+    .btn-deny {
+      padding: 10px 18px; border-radius: 10px; cursor: pointer;
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+      color: var(--denied); font-size: 12px; font-weight: 700; letter-spacing: 1px;
+      font-family: 'Outfit', sans-serif; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-deny:hover { background: rgba(239,68,68,0.2); }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px);
+      padding: 10px 22px; border-radius: 100px; font-size: 13px; font-weight: 600;
+      backdrop-filter: blur(16px); border: 1px solid var(--border);
+      transition: transform 0.3s ease; z-index: 9999; white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.info    { background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.3); color: #93c5fd; }
+    #toast.success { background: rgba(34,197,94,0.2);  border-color: rgba(34,197,94,0.3);  color: #86efac; }
+    #toast.error   { background: rgba(239,68,68,0.2);  border-color: rgba(239,68,68,0.3);  color: #fca5a5; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      #dashboard { padding: 8px; gap: 8px; overflow-y: auto; overflow-x: hidden; }
+      .main-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+      .scan-panel { grid-row: auto; min-height: 280px; }
+      .recent-panel { max-height: 260px; }
+      html, body { overflow: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">CHARRMPASS</div>
+    <div><span class="login-gate-badge">● ENTRY GATE</span></div>
+    <h1 class="login-title">Guard Login</h1>
+    <p class="login-sub">Entry Gate Monitor · Authorized Personnel Only</p>
+    <label class="login-label" for="loginUser">Username</label>
+    <input class="login-input" type="text"     id="loginUser" placeholder="guard" autocomplete="username" />
+    <label class="login-label" for="loginPass">Password</label>
+    <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
+    <button class="login-btn" id="btnLogin" onclick="doLogin()">SIGN IN</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ DASHBOARD ═══════════════ -->
+<div id="dashboard" class="hidden">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="hdr-left">
+      <span class="hdr-logo">CHARRMPASS</span>
+      <span class="hdr-badge">ENTRY GATE</span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-guard">Guard: <strong id="guardNameDisplay">—</strong></span>
+      <div class="hdr-online" id="connIndicator">
+        <div class="dot"></div>
+        <span id="connText">ONLINE</span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- SCAN PANEL -->
+    <section class="scan-panel" id="scanPanel">
+      <!-- Ready (default) -->
+      <div class="ready-state" id="readyState">
+        <div class="radar-ring">
+          <div class="radar-inner">
+            <i data-lucide="nfc" class="radar-icon"></i>
+          </div>
+        </div>
+        <div class="ready-title">READY TO SCAN</div>
+        <div class="ready-sub">Place RFID card near reader or type UID below</div>
+      </div>
+
+      <!-- Result (populated by JS) -->
+      <div class="scan-result hidden" id="scanResult">
+        <!-- filled dynamically -->
+      </div>
+    </section>
+
+    <!-- RECENT ACTIVITY -->
+    <section class="recent-panel">
+      <div class="recent-hdr">
+        <h3>Recent Entries</h3>
+      </div>
+      <div class="recent-body" id="recentBody">
+        <div class="scan-empty">No entries yet today</div>
+      </div>
+    </section>
+
+    <!-- CONTROLS -->
+    <div class="controls-panel">
+      <div class="manual-input-wrap">
+        <input class="manual-input" type="text" id="manualUID"
+               placeholder="Type RFID UID manually (e.g. AB CD EF 12)"
+               maxlength="50" />
+        <button class="btn-process" id="btnProcess">PROCESS</button>
+      </div>
+      <div class="divider"></div>
+      <button class="btn-deny" id="btnDeny">✕ DENY</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="supabase-config.js"></script>
+<script src="entry-app.js"></script>
+<script>
+  lucide.createIcons();
+</script>
+</body>
+</html>

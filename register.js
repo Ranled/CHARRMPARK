@@ -1,5 +1,5 @@
 /**
- * CHARRMPARK - Registration Page Logic
+ * CHARRMPASS - Registration Page Logic
  * Multi-step form with camera/upload, validation, and Supabase submission
  */
 
@@ -64,7 +64,20 @@ function validateCurrentStep() {
             }
         }
     }
-    // Step 2: Photos are now OPTIONAL for easier testing
+    if (currentStep === 2) {
+        if (!photoData.profile) {
+            showToast('Please upload or take your profile picture first.', 'warning');
+            return false;
+        }
+        if (!photoData.idFront) {
+            showToast('Please upload the front of your ID card first.', 'warning');
+            return false;
+        }
+        if (!photoData.idBack) {
+            showToast('Please upload the back of your ID card first.', 'warning');
+            return false;
+        }
+    }
     if (currentStep === 3) {
         const fields = ['regVehType', 'regVehModel', 'regPlate', 'regVehColor'];
         for (const id of fields) {
@@ -267,7 +280,7 @@ function buildReview() {
     // Document thumbnails
     html += '<div class="mt-4"><div class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Uploaded Documents</div><div class="flex gap-3 flex-wrap">';
     
-    const docs = { 'Profile': photoData.profile, 'License': photoData.license, 'ID Front': photoData.idFront, 'ID Back': photoData.idBack };
+    const docs = { 'Profile': photoData.profile, 'ID Front': photoData.idFront, 'ID Back': photoData.idBack };
     for (const [label, img] of Object.entries(docs)) {
         if (img) {
             html += `<div class="text-center"><img src="${img}" alt="${label}" class="w-16 h-16 rounded-lg object-cover border border-slate-200 shadow-sm"><div class="text-[10px] font-bold text-slate-400 mt-1">${label}</div></div>`;
@@ -293,45 +306,91 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     btnSubmit.disabled = true;
     lucide.createIcons();
 
-    // Build user data — NO rfid_uid field (admin assigns it later)
-    const userData = {
-        full_name: document.getElementById('regFullName').value.trim(),
-        age: parseInt(document.getElementById('regAge').value),
-        sex: document.getElementById('regSex').value,
-        address: document.getElementById('regAddress').value.trim(),
-        role: document.getElementById('regRole').value,
-        program: document.getElementById('regProgram').value.trim() || null,
-        section: document.getElementById('regSection').value.trim() || null,
-        vehicle_type: document.getElementById('regVehType').value,
-        vehicle_model: document.getElementById('regVehModel').value.trim(),
-        plate_number: document.getElementById('regPlate').value.toUpperCase().trim(),
-        vehicle_color: document.getElementById('regVehColor').value.trim(),
-        profile_image: photoData.profile || null,
-        drivers_license_image: photoData.license || null,
-        id_front_image: photoData.idFront || null,
-        id_back_image: photoData.idBack || null,
-        motorcycle_image: photoData.motorcycle || null,
-        authorization_status: 'PENDING'
-        // NOTE: rfid_uid is NOT sent — it stays NULL (admin assigns later)
-    };
-
     try {
         if (isConnected) {
-            const { data, error } = await supabaseClient.from('users').insert([userData]).select();
-            if (error) throw error;
-            console.log('✅ Registration saved:', data);
-            showToast('Registration submitted to server!', 'success');
+            // ── STEP 1: Insert into USERS ─────────────────────────────────────
+            const { data: newUser, error: userErr } = await supabaseClient
+                .from('users')
+                .insert([{
+                    full_name:             document.getElementById('regFullName').value.trim(),
+                    age:                   parseInt(document.getElementById('regAge').value),
+                    sex:                   document.getElementById('regSex').value,
+                    address:               document.getElementById('regAddress').value.trim(),
+                    role:                  document.getElementById('regRole').value,
+                    program:               document.getElementById('regProgram').value.trim() || null,
+                    section:               document.getElementById('regSection').value.trim() || null,
+                    profile_image:         photoData.profile  || null,
+                    id_front_image:        photoData.idFront  || null,
+                    id_back_image:         photoData.idBack   || null,
+                    drivers_license_image: photoData.license  || null,
+                }])
+                .select()
+                .single();
+            if (userErr) throw new Error('User insert failed: ' + userErr.message);
+
+            const userId = newUser.id;
+
+            // ── STEP 2: Insert into VEHICLES ──────────────────────────────────
+            const { data: newVehicle, error: vehErr } = await supabaseClient
+                .from('vehicles')
+                .insert([{
+                    user_id:          userId,
+                    vehicle_type:     document.getElementById('regVehType').value,
+                    vehicle_model:    document.getElementById('regVehModel').value.trim(),
+                    plate_number:     document.getElementById('regPlate').value.toUpperCase().trim(),
+                    vehicle_color:    document.getElementById('regVehColor').value.trim(),
+                    motorcycle_image: photoData.motorcycle || null,
+                }])
+                .select()
+                .single();
+            if (vehErr) {
+                // Roll back user if vehicle insert fails (duplicate plate, etc.)
+                await supabaseClient.from('users').delete().eq('id', userId);
+                throw new Error('Vehicle insert failed: ' + vehErr.message);
+            }
+
+            const vehicleId = newVehicle.id;
+
+            // ── STEP 3: Insert into RFID_CARDS (no UID yet — admin assigns) ──
+            const { error: cardErr } = await supabaseClient
+                .from('rfid_cards')
+                .insert([{
+                    rfid_uid:             'UNASSIGNED_' + Date.now(), // placeholder; admin replaces
+                    vehicle_id:           vehicleId,
+                    user_id:              userId,
+                    authorization_status: 'PENDING',
+                }]);
+            if (cardErr) throw new Error('RFID card insert failed: ' + cardErr.message);
+
+            console.log('✅ Registration saved (user, vehicle, rfid_card):', userId, vehicleId);
+            showToast('Registration submitted! Awaiting admin approval.', 'success');
+
         } else {
-            // Demo mode - save to localStorage
-            const registrations = JSON.parse(localStorage.getItem('charrmpark_registrations') || '[]');
-            userData.id = 'local_' + Date.now();
-            userData.created_at = new Date().toISOString();
-            registrations.push(userData);
-            localStorage.setItem('charrmpark_registrations', JSON.stringify(registrations));
+            // Demo mode — save flat record to localStorage
+            const registrations = JSON.parse(localStorage.getItem('charrmpass_registrations') || '[]');
+            const demo = {
+                id:                    'local_' + Date.now(),
+                created_at:            new Date().toISOString(),
+                full_name:             document.getElementById('regFullName').value.trim(),
+                age:                   parseInt(document.getElementById('regAge').value),
+                sex:                   document.getElementById('regSex').value,
+                address:               document.getElementById('regAddress').value.trim(),
+                role:                  document.getElementById('regRole').value,
+                program:               document.getElementById('regProgram').value.trim() || null,
+                section:               document.getElementById('regSection').value.trim() || null,
+                vehicle_type:          document.getElementById('regVehType').value,
+                vehicle_model:         document.getElementById('regVehModel').value.trim(),
+                plate_number:          document.getElementById('regPlate').value.toUpperCase().trim(),
+                vehicle_color:         document.getElementById('regVehColor').value.trim(),
+                profile_image:         photoData.profile  || null,
+                authorization_status:  'PENDING',
+            };
+            registrations.push(demo);
+            localStorage.setItem('charrmpass_registrations', JSON.stringify(registrations));
             showToast('Registration saved locally (Demo Mode).', 'info');
         }
 
-        // Show success
+        // Show success screen
         document.getElementById('registrationForm').classList.add('hidden');
         document.getElementById('formStepper').classList.add('hidden');
         document.getElementById('successMessage').classList.remove('hidden');

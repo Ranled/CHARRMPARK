@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHARRMPARK - Intelligent RFID Parking Management System</title>
+    <title>CHARMMPASS - Aklan State University Smart Vehicle Monitoring</title>
     <link rel="icon" type="image/png" href="logocharrmpark.png">
-    <meta name="description" content="CHARRMPARK RFID Smart Parking System - Select your role to access the campus parking management platform.">
+    <meta name="description"
+        content="CHARMMPASS - Smart Vehicle Entry and Exit Monitoring System Using RFID Technology for Aklan State University - Ibajay Campus">
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,21 +28,23 @@
                     },
                     colors: {
                         charm: {
-                            dark: '#0E4B3A',
-                            mid: '#1F6B4F',
+                            dark: '#0E5C4A',
+                            deep: '#072b22',
+                            mid: '#147a63',
                             light: '#B7D8B0',
-                            yellow: '#F2B827',
+                            yellow: '#F5B335',
+                            gold: '#F5B335',
                             white: '#FFFFFF',
-                            gray: '#F5F5F5',
+                            gray: '#F8FAFC',
+                            slate: '#64748B',
+                            text: '#1F2937',
                             red: '#EF4444',
                             green: '#22C55E'
                         }
                     },
                     boxShadow: {
-                        'glass': '0 8px 32px 0 rgba(14, 75, 58, 0.15)',
-                        'hover': '0 25px 50px -12px rgba(14, 75, 58, 0.35)',
-                        'glow-yellow': '0 0 40px rgba(242, 184, 39, 0.3)',
-                        'glow-green': '0 0 40px rgba(34, 197, 94, 0.2)',
+                        'card-depth': '0 20px 60px rgba(0, 0, 0, 0.22)',
+                        'logo-glow': '0 0 25px rgba(245, 179, 53, 0.25)',
                     }
                 }
             }
@@ -49,89 +56,360 @@
     <!-- Icons (Lucide) -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-gray-100 text-slate-800 font-sans min-h-screen campus-bg relative flex flex-col items-center justify-center p-6">
 
-    <!-- Animated Background -->
-    <div class="absolute inset-0 bg-charm-dark/85 backdrop-blur-md z-0 pointer-events-none"></div>
-    
-    <!-- Floating particles -->
-    <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div class="particle particle-1"></div>
-        <div class="particle particle-2"></div>
-        <div class="particle particle-3"></div>
-        <div class="particle particle-4"></div>
-        <div class="particle particle-5"></div>
+<body
+    class="bg-[#051411] text-slate-800 font-sans min-h-screen flex flex-col justify-between items-center px-4 py-3 md:py-5 selection:bg-charm-yellow selection:text-charm-dark relative overflow-y-auto overflow-x-hidden md:overflow-hidden">
+
+    <!-- Subtle Ambient Video Background -->
+    <div class="bg-video-container">
+        <video id="bgVideo" class="bg-video" autoplay loop muted playsinline poster="landingbg.jpg">
+            <source src="INTRO VIDEO.mp4" type="video/mp4">
+        </video>
     </div>
 
-    <!-- Main Container -->
-    <div class="relative z-10 w-full max-w-6xl animate-slide-up flex flex-col items-center">
-        
-        <!-- Branding Header -->
-        <div class="text-center mb-16">
-            <div class="w-28 h-28 bg-white/10 rounded-3xl mx-auto mb-6 flex items-center justify-center backdrop-blur-lg border border-white/20 shadow-glass overflow-hidden logo-pulse">
-                <img src="logocharrmpark.png" alt="CHARRMPARK Logo" class="w-20 h-20 object-contain" onerror="this.style.display='none'; this.parentElement.innerHTML='<i data-lucide=&quot;parking-circle&quot; class=&quot;w-14 h-14 text-charm-yellow&quot;></i>'; lucide.createIcons();">
+    <!-- Darkened 85% Cinematic Overlay for Card Contrast -->
+    <div class="cinematic-overlay"></div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- Header / Brand & University Identity Section -->
+    <header class="relative z-10 w-full max-w-lg text-center flex flex-col items-center pt-1">
+        <!-- Logo with subtle warm glow -->
+        <div
+            class="w-14 h-14 md:w-16 md:h-16 bg-[#0E5C4A]/90 border border-emerald-400/30 rounded-2xl mb-2.5 flex items-center justify-center backdrop-blur-md shadow-logo-glow transition-transform duration-300 hover:scale-105">
+            <img src="logocharrmpark.png" alt="CHARMMPASS Logo"
+                class="w-10 h-10 md:w-11 md:h-11 object-contain drop-shadow"
+                onerror="this.style.display='none'; this.parentElement.innerHTML='<i data-lucide=&quot;shield-check&quot; class=&quot;w-7 h-7 text-[#F5B335]&quot;></i>'; lucide.createIcons();">
+        </div>
+
+        <!-- System Title -->
+        <h1
+            class="font-display font-extrabold text-2xl md:text-3xl text-white tracking-tight leading-tight mb-1 drop-shadow-sm">
+            CHARMM<span class="text-[#F5B335]">PASS</span>
+        </h1>
+
+        <!-- Clean Subtitle & University Badge -->
+        <p class="text-emerald-100/90 text-xs md:text-sm font-medium tracking-wide">
+            A Web-Based Smart Vehicle Entry and Exit Monitoring System Using RFID Technology for Aklan State University
+            - Ibajay Campus
+
+        </p>
+        <span class="text-emerald-300/75 text-[10px] font-semibold uppercase tracking-widest mt-1">
+            Aklan State University • Ibajay Campus
+        </span>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="relative z-10 w-full max-w-[420px] my-auto py-2 flex flex-col items-center">
+
+        <!-- VIEW 1: Initial Welcome Hero (SIGN IN Button) -->
+        <div id="landingView" class="w-full transition-all duration-200 ease-out transform opacity-100 scale-100">
+            <div class="premium-card w-full">
+                <!-- Compact Translucent Green Header -->
+                <div class="card-header-translucent px-6 py-4 text-center text-white">
+                    <h2 class="font-display font-bold text-xl md:text-2xl tracking-tight">
+                        Welcome
+                    </h2>
+                    <p class="text-emerald-100/80 text-xs mt-0.5 font-medium">
+                        Sign in to continue to CHARRMPASS
+                    </p>
+                </div>
+
+                <!-- Card Body -->
+                <div class="card-body-surface p-6 md:p-7 text-center">
+                    <p class="text-slate-600 text-xs md:text-sm font-normal mb-5 leading-relaxed">
+                        Monitor vehicle entry, RFID verification, and campus security in one unified platform.
+                    </p>
+
+                    <!-- Action Buttons -->
+                    <div class="space-y-3">
+                        <button type="button" id="openSignInBtn" onclick="showLoginView()"
+                            class="btn-primary-action w-full flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <span>Sign In</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4 text-[#F5B335]"></i>
+                        </button>
+
+                        <!-- Secondary Outlined Registration Button -->
+                        <a href="register.html"
+                            class="btn-secondary-action w-full flex items-center justify-center gap-2 cursor-pointer">
+                            <i data-lucide="user-plus" class="w-4 h-4 text-emerald-800"></i>
+                            <span>Register Vehicle (Student / Faculty)</span>
+                        </a>
+                    </div>
+                </div>
             </div>
-            <h1 class="font-display font-extrabold text-5xl md:text-6xl tracking-tight text-white mb-3">CHARRM<span class="text-charm-yellow">PARK</span></h1>
-            <p class="text-charm-light/80 text-lg font-medium tracking-wide uppercase">Intelligent RFID Parking Management System</p>
-            <p class="text-white/40 text-sm mt-2 font-medium">Select your role to continue</p>
         </div>
 
-        <!-- Role Selection Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full" id="roleCards">
-            
-            <!-- Student / Faculty Registration -->
-            <a href="register.html" id="card-student" class="group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 hover:border-white/40">
-                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div class="relative z-10 w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 group-hover:bg-blue-500/40 transition-all duration-300 border border-blue-400/30 group-hover:shadow-glow-green group-hover:scale-110">
-                    <i data-lucide="graduation-cap" class="w-10 h-10 text-blue-300"></i>
-                </div>
-                <h3 class="relative z-10 font-display font-bold text-2xl text-white mb-2">Student / Faculty</h3>
-                <p class="relative z-10 text-slate-300 text-sm font-medium mb-6 flex-1">Register your vehicle, upload documents, and apply for campus parking access.</p>
-                <div class="relative z-10 w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm border border-white/10 group-hover:bg-white group-hover:text-charm-dark transition-all duration-300">
-                    Register Now
-                </div>
-            </a>
+        <!-- VIEW 2: Credentials Form Card (Enterprise Style) -->
+        <div id="loginCardView" class="w-full hidden transition-all duration-200 ease-out transform opacity-0 scale-95">
+            <div class="premium-card w-full">
 
-            <!-- Guard Dashboard -->
-            <a href="guard-dashboard.html" id="card-guard" class="group relative bg-white/10 backdrop-blur-xl border-2 border-charm-yellow/50 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 transform scale-105 z-20">
-                <div class="absolute -top-4 bg-charm-yellow text-charm-dark text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg animate-pulse-slow">Primary System</div>
-                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                
-                <div class="relative z-10 w-24 h-24 rounded-full bg-charm-yellow/20 flex items-center justify-center mb-6 group-hover:bg-charm-yellow/40 transition-all duration-300 border border-charm-yellow/50 shadow-glow-yellow group-hover:scale-110">
-                    <i data-lucide="shield-check" class="w-12 h-12 text-charm-yellow"></i>
-                </div>
-                <h3 class="relative z-10 font-display font-bold text-3xl text-white mb-2">Security Guard</h3>
-                <p class="relative z-10 text-slate-300 text-sm font-medium mb-8 flex-1">Access Live Scan, verify RFID tags, manage parking slots, and monitor activity in real-time.</p>
-                <div class="relative z-10 w-full py-4 rounded-xl bg-charm-yellow text-charm-dark font-bold text-sm shadow-lg group-hover:bg-white transition-all duration-300">
-                    Access Dashboard
-                </div>
-            </a>
+                <!-- Compact Translucent Green Header with Back Navigation -->
+                <div class="card-header-translucent px-6 py-4 relative text-center text-white">
+                    <!-- Back Button -->
+                    <button type="button" id="backToWelcomeBtn" onclick="showLandingView()"
+                        class="absolute left-4 top-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 active:bg-white/30 text-white transition-colors flex items-center gap-1 text-xs font-semibold focus:outline-none"
+                        title="Back to Overview">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5 text-[#F5B335]"></i>
+                        <span>Back</span>
+                    </button>
 
-            <!-- Admin Panel -->
-            <a href="admin-dashboard.html" id="card-admin" class="group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-4 hover:shadow-hover hover:bg-white/20 hover:border-white/40">
-                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div class="relative z-10 w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mb-6 group-hover:bg-purple-500/40 transition-all duration-300 border border-purple-400/30 group-hover:shadow-glow-green group-hover:scale-110">
-                    <i data-lucide="shield-alert" class="w-10 h-10 text-purple-300"></i>
+                    <h2 class="font-display font-bold text-xl md:text-2xl tracking-tight">
+                        Sign In
+                    </h2>
+                    <p class="text-emerald-100/80 text-xs mt-0.5 font-medium">
+                        Enter your credentials to access system
+                    </p>
                 </div>
-                <h3 class="relative z-10 font-display font-bold text-2xl text-white mb-2">Administrator</h3>
-                <p class="relative z-10 text-slate-300 text-sm font-medium mb-6 flex-1">Approve registrations, manage users, view analytics, and configure the parking system.</p>
-                <div class="relative z-10 w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm border border-white/10 group-hover:bg-white group-hover:text-charm-dark transition-all duration-300">
-                    Manage System
-                </div>
-            </a>
 
+                <!-- Card Body (Form) -->
+                <div class="card-body-surface p-6 md:p-7">
+                    <form id="loginForm" class="space-y-4">
+                        <!-- USERNAME Input -->
+                        <div>
+                            <label for="username"
+                                class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                                <span>Username</span>
+                            </label>
+                            <input type="text" id="username" name="username" required autocomplete="username"
+                                class="w-full px-3.5 py-2.5 bg-slate-50/80 border border-slate-300/80 rounded-xl text-slate-800 placeholder-slate-400 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0E5C4A] focus:border-transparent transition-all shadow-inner"
+                                placeholder="Enter username">
+                        </div>
+
+                        <!-- PASSWORD Input -->
+                        <div>
+                            <label for="password"
+                                class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                                <span>Password</span>
+                            </label>
+                            <input type="password" id="password" name="password" required
+                                autocomplete="current-password"
+                                class="w-full px-3.5 py-2.5 bg-slate-50/80 border border-slate-300/80 rounded-xl text-slate-800 placeholder-slate-400 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0E5C4A] focus:border-transparent transition-all shadow-inner"
+                                placeholder="Enter password">
+                        </div>
+
+                        <!-- Sign In Button -->
+                        <div class="pt-1">
+                            <button type="submit" id="loginBtn"
+                                class="btn-primary-action w-full flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <span>Log in</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4 text-[#F5B335]"></i>
+                            </button>
+                        </div>
+
+                        <!-- Portal Connections (Student & Faculty Registration) -->
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <a href="register.html"
+                                class="text-slate-600 hover:text-[#0E5C4A] font-medium transition-colors flex items-center gap-1">
+                                <i data-lucide="user-plus" class="w-3.5 h-3.5 text-emerald-700"></i>
+                                <span>Register Vehicle</span>
+                            </a>
+                            <span class="text-slate-300">•</span>
+                            <a href="register.html"
+                                class="text-emerald-800 hover:text-emerald-950 font-semibold transition-colors flex items-center gap-1">
+                                <span>Student / Faculty</span>
+                                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
-        <!-- Footer -->
-        <div class="mt-16 text-center">
-            <p class="text-slate-400 text-xs font-medium uppercase tracking-widest">&copy; 2024 CHARRMPARK University Systems. All Rights Reserved.</p>
-            <p class="text-slate-500/50 text-[10px] mt-2">Powered by Supabase &bull; ESP32 RFID Integration</p>
-        </div>
-    </div>
+    </main>
 
-    <!-- Init script -->
+    <!-- Page Footer -->
+    <footer class="relative z-10 w-full text-center py-2 text-white/55 text-xs font-medium tracking-wide">
+        &copy; 2026 CHARRMPASS • Developed by Obsidian Devs • v1.0
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script>
-        lucide.createIcons();
+        // Custom Toast Function
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-600 text-white' : (type === 'success' ? 'bg-emerald-700 text-white' : 'bg-slate-800 text-white');
+            const iconName = type === 'error' ? 'alert-circle' : (type === 'success' ? 'check-circle' : 'info');
+
+            toast.className = `${bgColor} px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs md:text-sm font-medium transition-all duration-200 transform translate-x-full pointer-events-auto max-w-sm`;
+            toast.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4 flex-shrink-0"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+            if (window.lucide) lucide.createIcons();
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-full');
+                setTimeout(() => toast.remove(), 250);
+            }, 3500);
+        }
+
+        // Snappy View Transitions
+        window.showLoginView = function () {
+            const landingView = document.getElementById('landingView');
+            const loginCardView = document.getElementById('loginCardView');
+            const usernameInput = document.getElementById('username');
+            if (!landingView || !loginCardView) return;
+
+            landingView.classList.add('opacity-0', 'scale-95');
+
+            setTimeout(() => {
+                landingView.classList.add('hidden');
+                loginCardView.classList.remove('hidden');
+
+                // Force Reflow
+                void loginCardView.offsetWidth;
+
+                loginCardView.classList.remove('opacity-0', 'scale-95');
+                loginCardView.classList.add('opacity-100', 'scale-100');
+
+                if (window.lucide) lucide.createIcons();
+                if (usernameInput) usernameInput.focus();
+            }, 120);
+        };
+
+        window.showLandingView = function () {
+            const landingView = document.getElementById('landingView');
+            const loginCardView = document.getElementById('loginCardView');
+            if (!landingView || !loginCardView) return;
+
+            loginCardView.classList.remove('opacity-100', 'scale-100');
+            loginCardView.classList.add('opacity-0', 'scale-95');
+
+            setTimeout(() => {
+                loginCardView.classList.add('hidden');
+                landingView.classList.remove('hidden');
+
+                // Force Reflow
+                void landingView.offsetWidth;
+
+                landingView.classList.remove('opacity-0', 'scale-95');
+                landingView.classList.add('opacity-100', 'scale-100');
+
+                if (window.lucide) lucide.createIcons();
+            }, 120);
+        };
+
+        // Keyboard navigation: Escape key returns to welcome view
+        window.addEventListener('keydown', (e) => {
+            const loginCardView = document.getElementById('loginCardView');
+            if (e.key === 'Escape' && loginCardView && !loginCardView.classList.contains('hidden')) {
+                showLandingView();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Initialize Icons
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // 2. Background Video Autoplay Safety Check
+            const bgVideo = document.getElementById('bgVideo');
+            if (bgVideo) {
+                const playPromise = bgVideo.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => {
+                        // Browser autoplay policy handled silently
+                    });
+                }
+            }
+
+            // 3. Initialize Supabase
+            let supabase;
+            try {
+                const config = initSupabase();
+                supabase = config.supabaseClient;
+            } catch (e) {
+                console.warn('Supabase initialization fallback:', e);
+            }
+
+            // 4. Login Logic & Routing to Other Pages
+            const loginForm = document.getElementById('loginForm');
+            const loginBtn = document.getElementById('loginBtn');
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const originalContent = loginBtn.innerHTML;
+
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+
+                if (!username || !password) {
+                    showNotification('Please enter both username and password.', 'error');
+                    return;
+                }
+
+                if (!supabase) {
+                    showNotification('Database connection unavailable. Please check settings.', 'error');
+                    return;
+                }
+
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline-block mr-1"></i> Authenticating...';
+                if (window.lucide) lucide.createIcons();
+
+                try {
+                    const { data, error } = await supabase
+                        .from('system_accounts')
+                        .select('*')
+                        .eq('username', username)
+                        .eq('password', password)
+                        .maybeSingle();
+
+                    if (error || !data) {
+                        showNotification('Invalid username or password.', 'error');
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = originalContent;
+                        if (window.lucide) lucide.createIcons();
+                        return;
+                    }
+
+                    showNotification(`Welcome back, ${data.username}!`, 'success');
+
+                    // Save Session for Dashboard Authentication
+                    sessionStorage.setItem('charrmpass_session', JSON.stringify({
+                        id: data.id,
+                        username: data.username,
+                        role: data.role,
+                        timestamp: Date.now()
+                    }));
+
+                    // Route based on role to respective dashboard
+                    setTimeout(() => {
+                        if (data.role === 'ADMIN') {
+                            window.location.href = 'admin-dashboard.html';
+                        } else {
+                            window.location.href = 'guard-dashboard.html';
+                        }
+                    }, 600);
+
+                } catch (err) {
+                    console.error('Auth error:', err);
+                    showNotification('Authentication error occurred.', 'error');
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = originalContent;
+                    if (window.lucide) lucide.createIcons();
+                }
+            });
+
+            // Check existing session
+            const session = sessionStorage.getItem('charrmpass_session');
+            if (session) {
+                try {
+                    const s = JSON.parse(session);
+                    console.log('Active session detected:', s.username, `(${s.role})`);
+                } catch (err) { }
+            }
+        });
     </script>
 </body>
+
 </html>

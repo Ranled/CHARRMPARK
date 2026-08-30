@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - CHARRMPARK</title>
+    <title>Admin Dashboard - CHARRMPASS</title>
     <link rel="icon" type="image/png" href="logocharrmpark.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +20,15 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // RBAC Session Protection
+        (function() {
+            const session = sessionStorage.getItem('charrmpass_session');
+            if (!session) { window.location.href = 'index.html'; return; }
+            const s = JSON.parse(session);
+            if (s.role !== 'ADMIN') { window.location.href = 'index.html'; return; }
+        })();
+    </script>
 </head>
 <body class="bg-gray-100 text-slate-800 font-sans overflow-hidden campus-bg relative">
     <div class="absolute inset-0 bg-white/70 backdrop-blur-xl z-0 pointer-events-none"></div>
@@ -27,7 +36,7 @@
         <!-- SIDEBAR -->
         <aside class="w-20 lg:w-64 bg-charm-dark text-white flex flex-col transition-all duration-300 shadow-2xl z-20">
             <div class="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-white/10 shrink-0">
-                <div class="hidden lg:flex flex-col"><h1 class="font-display font-bold text-xl tracking-wider text-white">CHARRM<span class="text-charm-yellow">PARK</span></h1><span class="text-[10px] text-charm-light uppercase tracking-widest font-medium">Admin Panel</span></div>
+                <div class="hidden lg:flex flex-col"><h1 class="font-display font-bold text-xl tracking-wider text-white">CHARRM<span class="text-charm-yellow">PASS</span></h1><span class="text-[10px] text-charm-light uppercase tracking-widest font-medium">Admin Panel</span></div>
                 <div class="lg:hidden font-display font-bold text-xl text-charm-yellow">CP</div>
             </div>
             <nav class="flex-1 py-6 flex flex-col gap-2 px-3 overflow-y-auto custom-scrollbar">
@@ -36,9 +45,12 @@
                 <a onclick="adminView('monitor')" class="sidebar-item cursor-pointer" id="anav-monitor"><i data-lucide="map" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Parking Monitor</span></a>
                 <a onclick="adminView('logs')" class="sidebar-item cursor-pointer" id="anav-logs"><i data-lucide="history" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Logs / History</span></a>
                 <a onclick="adminView('analytics')" class="sidebar-item cursor-pointer" id="anav-analytics"><i data-lucide="bar-chart-3" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Analytics</span></a>
+                <a onclick="adminView('slots')" class="sidebar-item cursor-pointer" id="anav-slots"><i data-lucide="square-parking" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Parking Management</span></a>
+                <a onclick="adminView('special')" class="sidebar-item cursor-pointer" id="anav-special"><i data-lucide="tag" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Visitor & Emergency</span></a>
+                <a onclick="adminView('access')" class="sidebar-item cursor-pointer" id="anav-access"><i data-lucide="shield-check" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Access Control</span></a>
                 <a href="settings.html" class="sidebar-item" id="anav-settings"><i data-lucide="settings" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Settings</span></a>
             </nav>
-            <div class="p-4 border-t border-white/10 shrink-0"><a href="index.html" class="sidebar-item w-full !text-red-300 hover:!bg-red-500/10"><i data-lucide="log-out" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Logout</span></a></div>
+            <div class="p-4 border-t border-white/10 shrink-0"><button onclick="logout()" class="sidebar-item w-full !text-red-300 hover:!bg-red-500/10 text-left"><i data-lucide="log-out" class="w-6 h-6"></i><span class="hidden lg:block ml-3 font-medium">Logout</span></button></div>
         </aside>
 
         <main class="flex-1 flex flex-col h-screen overflow-hidden">
@@ -60,7 +72,7 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
                         <div class="glass-card rounded-2xl p-5 border border-white/60 flex items-center gap-4 hover:-translate-y-1 transition-transform"><div class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><i data-lucide="users" class="w-6 h-6"></i></div><div><div class="text-xs font-semibold text-slate-500 uppercase">Total Users</div><div class="text-2xl font-display font-bold text-slate-800" id="adminStatUsers">--</div></div></div>
                         <div class="glass-card rounded-2xl p-5 border border-charm-yellow/50 flex items-center gap-4 hover:-translate-y-1 transition-transform"><div class="w-14 h-14 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center"><i data-lucide="clock" class="w-6 h-6"></i></div><div><div class="text-xs font-semibold text-slate-500 uppercase">Pending Approval</div><div class="text-2xl font-display font-bold text-yellow-600" id="adminStatPending">--</div></div></div>
-                        <div class="glass-card rounded-2xl p-5 border border-white/60 flex items-center gap-4 hover:-translate-y-1 transition-transform"><div class="w-14 h-14 rounded-full bg-charm-light/30 text-charm-dark flex items-center justify-center"><i data-lucide="log-in" class="w-6 h-6"></i></div><div><div class="text-xs font-semibold text-slate-500 uppercase">Entries Today</div><div class="text-2xl font-display font-bold text-slate-800" id="adminStatEntries">--</div></div></div>
+                        <div class="glass-card rounded-2xl p-5 border border-white/60 flex items-center gap-4 hover:-translate-y-1 transition-transform"><div class="w-14 h-14 rounded-full bg-charm-light/30 text-charm-dark flex items-center justify-center"><i data-lucide="log-in" class="w-6 h-6"></i></div><div><div class="text-xs font-semibold text-slate-500 uppercase">Total Entries</div><div class="text-2xl font-display font-bold text-slate-800" id="adminStatEntries">--</div></div></div>
                         <div class="glass-card rounded-2xl p-5 border border-white/60 flex items-center gap-4 hover:-translate-y-1 transition-transform"><div class="w-14 h-14 rounded-full bg-charm-dark text-charm-yellow flex items-center justify-center"><i data-lucide="parking-circle" class="w-6 h-6"></i></div><div><div class="text-xs font-semibold text-slate-500 uppercase">Available Slots</div><div class="text-2xl font-display font-bold text-charm-dark" id="adminStatSlots">--</div></div></div>
                     </div>
                     <!-- Pending Registrations -->
@@ -88,10 +100,16 @@
 
                 <!-- PARKING MONITOR -->
                 <div id="aview-monitor" class="app-view hidden p-6 lg:p-8 flex-col gap-6 animate-slide-up">
-                    <div><h2 class="text-3xl font-display font-extrabold text-slate-800">Parking Monitor</h2></div>
-                    <div class="glass-card rounded-3xl p-6 border border-white/60 shadow-glass">
-                        <div class="flex items-center gap-6 mb-6"><h3 class="font-display font-bold text-lg">TM Building</h3><div class="flex gap-3 text-xs font-bold"><span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-charm-green"></span>Available</span><span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500"></span>Occupied</span></div></div>
-                        <div id="adminMonitorSlots" class="grid grid-cols-5 md:grid-cols-10 gap-3"></div>
+                    <div class="flex justify-between items-center">
+                        <div><h2 class="text-3xl font-display font-extrabold text-slate-800">Parking Monitor</h2><p class="text-slate-500 font-medium">Real-time occupancy by building.</p></div>
+                        <div class="flex gap-3 text-xs font-bold bg-white/50 p-2 rounded-xl border border-white/60 shadow-sm">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-charm-green"></span>Available</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500"></span>Occupied</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-yellow-400"></span>Maintenance</span>
+                        </div>
+                    </div>
+                    <div id="adminMonitorSlots" class="flex flex-col gap-8">
+                        <!-- Dynamic Building Groups will be rendered here -->
                     </div>
                 </div>
 
@@ -105,13 +123,28 @@
                     </div>
                 </div>
 
+    <style>
+        .active-range { background: white !important; color: #0E4B3A !important; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important; font-weight: 800 !important; }
+    </style>
+
                 <!-- ANALYTICS -->
                 <div id="aview-analytics" class="app-view hidden p-6 lg:p-8 flex-col gap-6 animate-slide-up">
-                    <div><h2 class="text-3xl font-display font-extrabold text-slate-800">Analytics</h2><p class="text-slate-500 font-medium mt-1">Entry/exit trends and user distribution.</p></div>
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-3xl font-display font-extrabold text-slate-800">Analytics</h2>
+                            <p class="text-slate-500 font-medium mt-1">Detailed trends including Visitor & Emergency data.</p>
+                        </div>
+                        <div class="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200 shadow-inner">
+                            <button onclick="setAnalyticsRange('day')" class="analytics-tab px-4 py-1.5 rounded-lg text-xs font-bold transition-all active-range" id="tab-day">Day</button>
+                            <button onclick="setAnalyticsRange('week')" class="analytics-tab px-4 py-1.5 rounded-lg text-xs font-bold transition-all" id="tab-week">Week</button>
+                            <button onclick="setAnalyticsRange('month')" class="analytics-tab px-4 py-1.5 rounded-lg text-xs font-bold transition-all" id="tab-month">Month</button>
+                            <button onclick="setAnalyticsRange('annual')" class="analytics-tab px-4 py-1.5 rounded-lg text-xs font-bold transition-all" id="tab-annual">Annual</button>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="glass-card rounded-3xl p-5 border border-white/60 h-72 flex flex-col"><h4 class="text-sm font-bold text-slate-700 mb-2">User Types (Pie)</h4><div class="flex-1 relative"><canvas id="chartUserTypes"></canvas></div></div>
-                        <div class="glass-card rounded-3xl p-5 border border-white/60 h-72 flex flex-col"><h4 class="text-sm font-bold text-slate-700 mb-2">Entry vs Exit (Bar)</h4><div class="flex-1 relative"><canvas id="chartEntryExit"></canvas></div></div>
-                        <div class="glass-card rounded-3xl p-5 border border-white/60 h-72 flex flex-col"><h4 class="text-sm font-bold text-slate-700 mb-2">Peak Hours (Line)</h4><div class="flex-1 relative"><canvas id="chartPeakHours"></canvas></div></div>
+                        <div class="glass-card rounded-3xl p-5 border border-white/60 h-80 flex flex-col"><h4 class="text-sm font-bold text-slate-700 mb-2">User Types (Pie)</h4><div class="flex-1 relative pb-2"><canvas id="chartUserTypes"></canvas></div></div>
+                        <div class="glass-card rounded-3xl p-5 border border-white/60 h-80 flex flex-col"><h4 class="text-sm font-bold text-slate-700 mb-2">Entry vs Exit (Bar)</h4><div class="flex-1 relative"><canvas id="chartEntryExit"></canvas></div></div>
+                        <div class="glass-card rounded-3xl p-5 border border-white/60 h-80 flex flex-col"><h4 class="text-sm font-bold text-slate-700 mb-2">Peak Hours (Line)</h4><div class="flex-1 relative"><canvas id="chartPeakHours"></canvas></div></div>
                     </div>
                     
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
@@ -119,7 +152,7 @@
                         <div class="glass-card rounded-3xl p-6 border border-white/60 shadow-glass flex flex-col h-80">
                             <h3 class="font-display font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="graduation-cap" class="w-5 h-5 text-charm-dark"></i> Top Student Activity</h3>
                             <div class="flex-1 overflow-auto rounded-xl border border-slate-100 bg-white/40">
-                                <table class="w-full text-left border-collapse"><thead class="bg-white/80 sticky top-0 text-[10px] uppercase text-slate-500 font-bold tracking-wider"><tr><th class="p-3 border-b border-slate-200">Rank</th><th class="p-3 border-b border-slate-200">Name</th><th class="p-3 border-b border-slate-200 text-center">Program</th><th class="p-3 border-b border-slate-200 text-right">Total Logs</th></tr></thead><tbody id="studentRankingTable" class="text-sm"></tbody></table>
+                                <table class="w-full text-left border-collapse"><thead class="bg-white/80 sticky top-0 text-[10px] uppercase text-slate-500 font-bold tracking-wider"><tr><th class="p-3 border-b border-slate-200 text-center">Rank</th><th class="p-3 border-b border-slate-200">Name</th><th class="p-3 border-b border-slate-200 text-center">Program</th><th class="p-3 border-b border-slate-200 text-center">Total Logs</th></tr></thead><tbody id="studentRankingTable" class="text-sm"></tbody></table>
                             </div>
                         </div>
                         
@@ -127,7 +160,92 @@
                         <div class="glass-card rounded-3xl p-6 border border-white/60 shadow-glass flex flex-col h-80">
                             <h3 class="font-display font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="briefcase" class="w-5 h-5 text-charm-mid"></i> Top Faculty/Staff Activity</h3>
                             <div class="flex-1 overflow-auto rounded-xl border border-slate-100 bg-white/40">
-                                <table class="w-full text-left border-collapse"><thead class="bg-white/80 sticky top-0 text-[10px] uppercase text-slate-500 font-bold tracking-wider"><tr><th class="p-3 border-b border-slate-200">Rank</th><th class="p-3 border-b border-slate-200">Name</th><th class="p-3 border-b border-slate-200 text-center">Role</th><th class="p-3 border-b border-slate-200 text-right">Total Logs</th></tr></thead><tbody id="facultyRankingTable" class="text-sm"></tbody></table>
+                                <table class="w-full text-left border-collapse"><thead class="bg-white/80 sticky top-0 text-[10px] uppercase text-slate-500 font-bold tracking-wider"><tr><th class="p-3 border-b border-slate-200 text-center">Rank</th><th class="p-3 border-b border-slate-200">Name</th><th class="p-3 border-b border-slate-200 text-center">Role</th><th class="p-3 border-b border-slate-200 text-center">Total Logs</th></tr></thead><tbody id="facultyRankingTable" class="text-sm"></tbody></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Access Control View -->
+                <div id="aview-access" class="app-view hidden flex-col h-full overflow-hidden animate-slide-up">
+                    <div class="px-6 py-6 border-b border-slate-100 bg-white/40">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="font-display font-bold text-2xl text-slate-800">Access Control</h2>
+                                <p class="text-sm text-slate-500">Manage Guard system accounts</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="accountsGrid">
+                            <!-- Accounts will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parking Management View -->
+                <div id="aview-slots" class="app-view hidden flex-col h-full overflow-hidden animate-slide-up">
+                    <div class="px-6 py-6 border-b border-slate-100 bg-white/40">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="font-display font-bold text-2xl text-slate-800">Parking Management</h2>
+                                <p class="text-sm text-slate-500">Add, remove or adjust parking slots</p>
+                            </div>
+                            <button onclick="openSlotManagementModal()" class="px-4 py-2 bg-charm-dark text-white rounded-xl text-sm font-bold shadow-lg hover:opacity-90 flex items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Add New Slot
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div class="glass-card rounded-3xl p-6 border border-white/60 shadow-glass">
+                            <div class="overflow-auto rounded-xl border border-slate-100 bg-white/40">
+                                <table class="w-full text-left border-collapse min-w-[600px]">
+                                    <thead class="bg-white/80 sticky top-0 text-xs uppercase text-slate-500 font-bold tracking-wider">
+                                        <tr>
+                                            <th class="p-4 border-b border-slate-200">Slot Number</th>
+                                            <th class="p-4 border-b border-slate-200">Area / Building</th>
+                                            <th class="p-4 border-b border-slate-200 text-center">Status</th>
+                                            <th class="p-4 border-b border-slate-200 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="slotManagementTable" class="text-sm">
+                                        <!-- Slots will be rendered here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visitor & Emergency Management View -->
+                <div id="aview-special" class="app-view hidden flex-col h-full overflow-hidden animate-slide-up">
+                    <div class="px-6 py-6 border-b border-slate-100 bg-white/40">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="font-display font-bold text-2xl text-slate-800">Visitor & Emergency Tags</h2>
+                                <p class="text-sm text-slate-500">Manage reusable RFID tags for visitors and emergency vehicles</p>
+                            </div>
+                            <button onclick="openSpecialTagModal()" class="px-4 py-2 bg-charm-dark text-white rounded-xl text-sm font-bold shadow-lg hover:opacity-90 flex items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Add Special Tag
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div class="glass-card rounded-3xl p-6 border border-white/60 shadow-glass">
+                            <div class="overflow-auto rounded-xl border border-slate-100 bg-white/40">
+                                <table class="w-full text-left border-collapse min-w-[600px]">
+                                    <thead class="bg-white/80 sticky top-0 text-xs uppercase text-slate-500 font-bold tracking-wider">
+                                        <tr>
+                                            <th class="p-4 border-b border-slate-200">RFID UID</th>
+                                            <th class="p-4 border-b border-slate-200">Type</th>
+                                            <th class="p-4 border-b border-slate-200">Description / Note</th>
+                                            <th class="p-4 border-b border-slate-200 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="specialTagsTable" class="text-sm">
+                                        <!-- Tags will be rendered here -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -174,8 +292,8 @@
                         </div>
                     </div>
                     <div class="md:col-span-2 space-y-3">
-                        <label class="form-label">Additional Documents (ID/License)</label>
-                        <div class="grid grid-cols-3 gap-4">
+                        <label class="form-label">Additional Documents (ID Front & Back)</label>
+                        <div class="grid grid-cols-2 gap-4">
                             <div class="text-center">
                                 <img id="prevIDFront" src="https://via.placeholder.com/150?text=ID+Front" class="w-full h-20 rounded-lg object-cover border border-slate-200 mb-2 cursor-pointer" onclick="viewFullImage(this.src)">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase">ID Front</label>
@@ -183,10 +301,6 @@
                             <div class="text-center">
                                 <img id="prevIDBack" src="https://via.placeholder.com/150?text=ID+Back" class="w-full h-20 rounded-lg object-cover border border-slate-200 mb-2 cursor-pointer" onclick="viewFullImage(this.src)">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase">ID Back</label>
-                            </div>
-                            <div class="text-center">
-                                <img id="prevLicense" src="https://via.placeholder.com/150?text=License" class="w-full h-20 rounded-lg object-cover border border-slate-200 mb-2 cursor-pointer" onclick="viewFullImage(this.src)">
-                                <label class="text-[9px] font-bold text-slate-400 uppercase">License</label>
                             </div>
                         </div>
                     </div>
@@ -199,7 +313,254 @@
         </div>
     </div>
 
+
+    <script>
+        // Update Profile Info from Session
+        (function() {
+            const session = JSON.parse(sessionStorage.getItem('charrmpass_session'));
+            if (session) {
+                const nameEls = document.querySelectorAll('.text-sm.font-bold.text-slate-800');
+                nameEls.forEach(el => {
+                    if (el.textContent === 'Admin User') el.textContent = session.username;
+                });
+                const img = document.querySelector('img[src*="ui-avatars.com"]');
+                if (img) img.src = `https://ui-avatars.com/api/?name=${session.username}&background=7C3AED&color=fff`;
+            }
+        })();
+
+        function logout() {
+            sessionStorage.removeItem('charrmpass_session');
+            window.location.href = 'index.html';
+        }
+    </script>
+    <!-- Slot Management Modal -->
+    <div id="slotManagementModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 transition-opacity">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 flex flex-col transform scale-95 transition-transform" id="slotManagementModalContent">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-display font-bold text-xl text-slate-800" id="slotModalTitle">Add Parking Slot</h3>
+                <button onclick="closeSlotManagementModal()" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="slotForm" class="space-y-4">
+                    <input type="hidden" id="formSlotId">
+                    <div class="space-y-1">
+                        <label class="form-label">Slot Number *</label>
+                        <input type="text" id="formSlotNumber" required placeholder="e.g. TM11" class="form-input font-bold">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="form-label">Area / Row *</label>
+                        <input type="text" id="formSlotRow" required placeholder="e.g. TM" class="form-input">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="form-label">Initial Status</label>
+                        <select id="formSlotStatus" class="form-input">
+                            <option value="AVAILABLE">AVAILABLE</option>
+                            <option value="DISABLED">DISABLED (Under Maintenance)</option>
+                        </select>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3">
+                        <button type="button" onclick="closeSlotManagementModal()" class="px-4 py-2 text-sm font-bold text-slate-500">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-charm-dark text-white rounded-xl text-sm font-bold shadow-md hover:opacity-90">Save Slot</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Modal -->
+    <div id="accountModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 transition-opacity">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 flex flex-col transform scale-95 transition-transform" id="accountModalContent">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-display font-bold text-xl text-slate-800">Edit System Account</h3>
+                <button onclick="closeAccountModal()" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="accountForm" class="space-y-4">
+                    <input type="hidden" id="formAccId">
+                    <div class="space-y-1">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="formAccUser" required class="form-input">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="form-label">Password</label>
+                        <div class="relative">
+                            <input type="password" id="formAccPass" required class="form-input pr-10">
+                            <button type="button" onclick="togglePass('formAccPass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-charm-dark">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="form-label">Role</label>
+                        <select id="formAccRole" class="form-input bg-slate-50" disabled>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="GUARD">GUARD</option>
+                        </select>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3">
+                        <button type="button" onclick="closeAccountModal()" class="px-4 py-2 text-sm font-bold text-slate-500">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-charm-dark text-white rounded-xl text-sm font-bold shadow-md hover:opacity-90">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Registration Modal -->
+    <div id="reviewModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 transition-opacity">
+        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl border border-slate-100 flex flex-col transform scale-95 transition-transform overflow-hidden" id="reviewModalContent">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-charm-dark text-white flex items-center justify-center shadow-md">
+                        <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-xl text-slate-800">Review Registration</h3>
+                </div>
+                <button onclick="closeReviewModal()" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Left Side: Profile & Details -->
+                    <div class="lg:col-span-4 flex flex-col items-center text-center">
+                        <img id="revProfileImage" src="" class="w-40 h-40 rounded-3xl object-cover border-4 border-white shadow-xl mb-6">
+                        <h4 id="revName" class="text-2xl font-display font-bold text-slate-800">--</h4>
+                        <div id="revRoleBadge" class="mt-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">--</div>
+                        
+                        <div class="w-full mt-8 space-y-4 text-left">
+                            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Personal Information</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><div class="text-[10px] font-bold text-slate-400 uppercase">Age</div><div id="revAge" class="text-sm font-bold text-slate-700">--</div></div>
+                                    <div><div class="text-[10px] font-bold text-slate-400 uppercase">Sex</div><div id="revSex" class="text-sm font-bold text-slate-700">--</div></div>
+                                    <div class="col-span-2"><div class="text-[10px] font-bold text-slate-400 uppercase">Program/Section</div><div id="revProgram" class="text-sm font-bold text-slate-700">--</div></div>
+                                    <div class="col-span-2"><div class="text-[10px] font-bold text-slate-400 uppercase">Address</div><div id="revAddress" class="text-xs font-medium text-slate-500 italic">--</div></div>
+                                </div>
+                            </div>
+                            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Vehicle Details</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><div class="text-[10px] font-bold text-slate-400 uppercase">Plate</div><div id="revPlate" class="text-sm font-bold text-charm-dark font-mono bg-charm-yellow/20 px-2 rounded inline-block">--</div></div>
+                                    <div><div class="text-[10px] font-bold text-slate-400 uppercase">Type</div><div id="revVehType" class="text-sm font-bold text-slate-700">--</div></div>
+                                    <div class="col-span-2"><div class="text-[10px] font-bold text-slate-400 uppercase">Model / Color</div><div id="revVehDetails" class="text-sm font-bold text-slate-700">--</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Side: Documents -->
+                    <div class="lg:col-span-8">
+                        <h5 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2"><i data-lucide="image" class="w-4 h-4"></i> Requirements & Documents</h5>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Vehicle/Motorcycle -->
+                            <div class="space-y-2">
+                                <div class="text-[10px] font-bold text-slate-500 uppercase">Vehicle Photo</div>
+                                <div class="h-48 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden group relative cursor-zoom-in" onclick="zoomImage(this)">
+                                    <img id="revImgMotor" class="w-full h-full object-cover transition-transform group-hover:scale-105">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">CLICK TO ZOOM</div>
+                                </div>
+                            </div>
+                            <!-- ID Front -->
+                            <div class="space-y-2">
+                                <div class="text-[10px] font-bold text-slate-500 uppercase">School ID (Front)</div>
+                                <div class="h-48 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden group relative cursor-zoom-in" onclick="zoomImage(this)">
+                                    <img id="revImgIdFront" class="w-full h-full object-cover transition-transform group-hover:scale-105">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">CLICK TO ZOOM</div>
+                                </div>
+                            </div>
+                            <!-- ID Back -->
+                            <div class="space-y-2">
+                                <div class="text-[10px] font-bold text-slate-500 uppercase">School ID (Back)</div>
+                                <div class="h-48 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden group relative cursor-zoom-in" onclick="zoomImage(this)">
+                                    <img id="revImgIdBack" class="w-full h-full object-cover transition-transform group-hover:scale-105">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">CLICK TO ZOOM</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <div class="text-xs font-medium text-slate-400 italic">Please verify all documents are clear and valid.</div>
+                <div class="flex gap-3">
+                    <button id="revBtnDeny" class="px-6 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold shadow-md hover:bg-red-600 transition-colors flex items-center gap-2"><i data-lucide="x-circle" class="w-4 h-4"></i> Deny Registration</button>
+                    <button id="revBtnApprove" class="px-6 py-2.5 rounded-xl bg-charm-green text-white text-sm font-bold shadow-md hover:bg-green-600 transition-colors flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> Approve Registration</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Zoom Modal -->
+    <div id="zoomModal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[60] flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
+        <img id="zoomImg" class="max-w-full max-h-full rounded-xl shadow-2xl transition-transform duration-300">
+    </div>
+
+    <!-- Special Tag Modal -->
+    <div id="specialTagModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 transition-opacity">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 flex flex-col transform scale-95 transition-transform" id="specialTagModalContent">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-display font-bold text-xl text-slate-800" id="specialTagModalTitle">Add Special Tag</h3>
+                <button onclick="closeSpecialTagModal()" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="specialTagForm" class="space-y-4">
+                    <input type="hidden" id="formTagId">
+                    <div class="space-y-1">
+                        <label class="form-label">RFID UID *</label>
+                        <input type="text" id="formTagUid" required placeholder="e.g. A1 B2 C3 D4" class="form-input font-mono uppercase font-bold">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="form-label">Type *</label>
+                        <select id="formTagType" required class="form-input">
+                            <option value="VISITOR">VISITOR TAG</option>
+                            <option value="EMERGENCY">EMERGENCY VEHICLE TAG</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="form-label">Description / Note</label>
+                        <input type="text" id="formTagDesc" placeholder="e.g. Visitor Tag 01" class="form-input">
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3">
+                        <button type="button" onclick="closeSpecialTagModal()" class="px-4 py-2 text-sm font-bold text-slate-500">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-charm-dark text-white rounded-xl text-sm font-bold shadow-md hover:opacity-90">Save Tag</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parking Slot Info Modal -->
+    <div id="slotInfoModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="slotInfoContent">
+            <div class="relative h-48 bg-charm-dark overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+                <img id="modalVehImage" src="" alt="Vehicle" class="w-full h-full object-cover">
+                <button onclick="closeSlotModal()" class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/40 transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+                <div class="absolute bottom-4 left-6 z-20 flex items-end gap-4">
+                    <div class="w-20 h-20 rounded-2xl border-4 border-white shadow-xl bg-slate-100 overflow-hidden">
+                        <img id="modalProfileImage" src="" alt="Profile" class="w-full h-full object-cover">
+                    </div>
+                    <div class="mb-1">
+                        <h3 id="modalName" class="text-2xl font-display font-bold text-white leading-tight">--</h3>
+                        <p id="modalRole" class="text-charm-light font-bold text-xs uppercase tracking-widest mt-1">--</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-8 grid grid-cols-2 gap-6 bg-white">
+                <div class="space-y-1"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Program / Section</label><p id="modalProgram" class="font-bold text-slate-800 text-sm">--</p></div>
+                <div class="space-y-1"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Plate Number</label><p id="modalPlate" class="font-bold text-charm-dark text-sm">--</p></div>
+                <div class="space-y-1"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Vehicle Type</label><p id="modalVehType" class="font-bold text-slate-800 text-sm">--</p></div>
+                <div class="space-y-1"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Vehicle Model</label><p id="modalVehModel" class="font-bold text-slate-800 text-sm">--</p></div>
+                <div class="col-span-2 pt-4 border-t border-slate-100 flex justify-center"><div class="px-6 py-2 rounded-full bg-charm-dark text-white text-xs font-black uppercase tracking-[0.2em]">Authorized Occupant</div></div>
+            </div>
+        </div>
+    </div>
+
     <script src="supabase-config.js"></script>
     <script src="admin-app.js"></script>
+    <script>
+        function logout() { sessionStorage.removeItem('charrmpass_session'); window.location.href = 'index.html'; }
+    </script>
 </body>
 </html>
